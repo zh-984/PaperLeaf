@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Paper {
+  id           String         @id @default(cuid())
+  title        String
+  filePath     String         @unique
+  fileName     String
+  fileSize     Int
+  pageCount    Int
+  lastPage     Int            @default(1)
+  lastPosition Float          @default(0)
+  textJson     String         @default("[]")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  report       InsightReport?
+  chunks       ChunkCache[]
+  notes        Note[]
+  history      AiHistory[]
+  shelfId      String?
+  shelf        Bookshelf?     @relation(fields: [shelfId], references: [id], onDelete: SetNull)
+
+  @@index([shelfId])
+  @@index([createdAt])
+}
+
+model InsightReport {
+  id           String   @id @default(cuid())
+  paperId      String   @unique
+  status       String   @default("idle")
+  sectionsJson String   @default("[]")
+  progress     String   @default("")
+  error        String   @default("")
+  model        String   @default("")
+  tokenUsage   Int      @default(0)
+  version      Int      @default(1)
+  runId        String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  paper        Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+}
+
+model ChunkCache {
+  id        String   @id @default(cuid())
+  paperId   String
+  cacheKey  String
+  content   String
+  tokens    Int      @default(0)
+  createdAt DateTime @default(now())
+  paper     Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@unique([paperId, cacheKey])
+}
+
+model Note {
+  id           String   @id @default(cuid())
+  paperId      String
+  page         Int?
+  selectedText String   @default("")
+  anchorJson   String   @default("")
+  content      String   @default("")
+  source       String   @default("manual")
+  version      Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  paper        Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@index([paperId])
+}
+
+model AiHistory {
+  id           String   @id @default(cuid())
+  paperId      String
+  page         Int
+  selectedText String   @default("")
+  anchorJson   String   @default("")
+  action       String
+  question     String   @default("")
+  answer       String
+  createdAt    DateTime @default(now())
+  paper        Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@index([paperId, createdAt])
+}
+
+model FileDeletion {
+  path      String   @id
+  createdAt DateTime @default(now())
+}
+
+model Bookshelf {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  collapsed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  papers    Paper[]
+}
+
+model AppPreference {
+  id                    String  @id @default("local")
+  defaultView           String  @default("report")
+  showAiNotice          Boolean @default(true)
+  autoInterpret         Boolean @default(false)
+  reduceMotion          Boolean @default(false)
+  readerFitWidth        Boolean @default(true)
+  defaultShelfCollapsed Boolean @default(false)
+  theme                 String  @default("green")
+}
