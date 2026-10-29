@@ -4,6 +4,10 @@
 
 中文界面，不需要账号。未配置 AI 时，书架、PDF 阅读、页码记忆和笔记均可独立使用。没有标签系统、BibTeX、云同步或统计追踪。
 
+<p align="center">
+  <img src="docs/images/readme-home.png" alt="知页 Paperleaf 的首页和文献导入入口" width="100%" />
+</p>
+
 ## Windows 桌面版（无需命令行）
 
 1. 打开 [下载页面（GitHub Releases）](https://github.com/zh-984/PaperLeaf/releases/latest)，下载 `Paperleaf-Setup-0.6.1-x64.exe`。
@@ -88,6 +92,10 @@ Word 引用和文末参考文献联动目前仅规划，路线、数据模型与
 - Windows 桌面使用集成标题栏，文件、编辑、查看、帮助在顶部；系统窗口按钮仍保留。
 
 ## 怎么使用
+
+<p align="center">
+  <img src="docs/images/readme-import.png" alt="导入文献后的解读报告和追问面板" width="100%" />
+</p>
 
 没有现成 PDF 时，可使用 [examples/sample-paper.pdf](examples/sample-paper.pdf)。它是明确标注的三页合成演示文档，不是真实论文。
 
