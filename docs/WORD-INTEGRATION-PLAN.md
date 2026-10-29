@@ -1,6 +1,8 @@
-# 知页与 Word 引用联动方案（仅规划）
+# 知页与 Word 引用联动方案
 
-目标是在 Microsoft Word 中搜索知页文献、插入引用，按选定格式更新引用编号，并在文末生成参考文献。本次没有开发或安装 Word 插件。
+目标是在 Microsoft Word 中搜索知页文献、插入引用，按选定格式更新引用编号，并在文末生成参考文献。当前已实现知页中的书目信息编辑、手动 AI 识别和可定制格式预览；**Word 插入、动态编号、文末生成和 Word 加载项尚未完成，不能用于正式文档。**
+
+本机验证了 64 位 Word 2024 的 COM 可启动，使用隔离临时文档的原型在创建文末参考文献内容控件时失败，已停止反复尝试。原型仅保留供后续排查，不注册到 Word、不随应用启用，也不应运行在真实文档上。下一步需先用临时文档修复控件插入并证明：重复引用去重、前插重排、删除、保存重开、无损处理其他控件，再开发 Word 功能区和本地通信。
 
 ## 推荐路线
 
@@ -10,7 +12,7 @@
 
 若以后要支持 Mac 或网页版 Word，再评估 **Office.js 任务窗格插件**。它可复用更多 TypeScript 代码，但需要解决稳定 HTTPS 地址、Office API 版本与本地服务连接。现有随机端口的 HTTP 阅读器不能直接作为正式插件入口。微软有引用管理示例，但示例的插入尾注功能不等同于完整的引用编号维护系统。[官方引用示例](https://learn.microsoft.com/en-us/samples/officedev/office-add-in-samples/word-citation-management/)、[HTTPS 开发要求](https://learn.microsoft.com/en-us/office/dev/add-ins/tutorials/word-tutorial)、[Office 插件运行环境](https://learn.microsoft.com/en-us/office/dev/add-ins/concepts/browsers-used-by-office-web-add-ins)。
 
-第一步应确认用户实际使用的 Microsoft Word 版本及 32/64 位。WPS 不预设兼容；LibreOffice、在线协作和手机 Word 不在首版范围。
+已确认当前测试机使用 64 位 Microsoft Word 2024。WPS 不预设兼容；LibreOffice、在线协作和手机 Word 不在首版范围。
 
 ## 用户操作
 

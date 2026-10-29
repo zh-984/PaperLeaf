@@ -38,6 +38,13 @@ if (
     readFileSync('prisma/migrations/20261028190000_manual_reading_themes/migration.sql', 'utf8'),
   );
 }
+if (
+  !database.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='Reference'").get()
+) {
+  database.exec(
+    readFileSync('prisma/migrations/20261029170000_reference_citations/migration.sql', 'utf8'),
+  );
+}
 database.close();
 const tsconfig = `.test-data/tsconfig-${mode}.json`;
 writeFileSync(

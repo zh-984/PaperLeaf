@@ -44,6 +44,7 @@ import { Dialog } from './ui/dialog';
 import { ProjectShelf } from './project-shelf';
 import { ReportView } from './report-view';
 import { SidePanel } from './side-panel';
+import { CitationView } from './citation-view';
 import { SettingsWindow } from './settings-window';
 import { DesktopTitlebar } from './desktop-titlebar';
 import { desktopAction } from '@/lib/desktop';
@@ -73,7 +74,7 @@ export function Workspace() {
     [createShelfSignal, setCreateShelfSignal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingPaper, setLoadingPaper] = useState(false);
-  const [view, setView] = useState<'report' | 'original'>('report');
+  const [view, setView] = useState<'report' | 'original' | 'citation'>('report');
   const [panel, setPanel] = useState(false);
   const [panelTab, setPanelTab] = useState<'chat' | 'notes'>('chat');
   const [mobileShelf, setMobileShelf] = useState(false);
@@ -698,6 +699,15 @@ export function Workspace() {
                     <BookOpen size={16} />
                     原文<span className="tab-page-count">{detail.pageCount} 页</span>
                   </button>
+                  <button
+                    role="tab"
+                    aria-selected={view === 'citation'}
+                    className={view === 'citation' ? 'active' : ''}
+                    onClick={() => setView('citation')}
+                  >
+                    <FileText size={16} />
+                    文献引用
+                  </button>
                 </div>
                 <span className="document-file-info">
                   <FileText size={13} />
@@ -717,6 +727,8 @@ export function Workspace() {
                       onOriginal={() => setView('original')}
                       onSettings={() => openSettings('ai')}
                     />
+                  ) : view === 'citation' ? (
+                    <CitationView key={detail.id} paper={detail} />
                   ) : (
                     <PdfReader
                       key={detail.id}

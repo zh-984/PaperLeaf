@@ -2,7 +2,14 @@ import { after } from 'next/server';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
-import { idSchema, notePatchSchema, noteSchema, paperPatchSchema } from '@/lib/validation';
+import {
+  idSchema,
+  notePatchSchema,
+  noteSchema,
+  paperPatchSchema,
+  referenceSaveSchema,
+  citationSettingsSchema,
+} from '@/lib/validation';
 import { parseByteRange } from '@/lib/range';
 import { db } from '@/server/db';
 import { ApiError, assertSameOrigin, errorResponse, jsonBody } from '@/server/http';
@@ -33,6 +40,28 @@ async function handler(request: Request, context: Context): Promise<Response> {
         const data = preferencesSchema.parse(await jsonBody(request));
         return Response.json(
           await db.appPreference.upsert({
+            where: { id: 'local' },
+            create: { id: 'local', ...data },
+            update: data,
+          }),
+        );
+      }
+    }
+    if (resource === 'citation-settings' && path.length === 1) {
+      if (method === 'GET') {
+        const settings = await db.citationSettings.findUnique({ where: { id: 'local' } });
+        return Response.json(
+          settings || {
+            markerTemplate: '[{{number}}]',
+            referenceTemplate:
+              '[{{number}}] {{authors}}. {{title}}[{{type}}]. {{journal}}, {{year}}, {{volume}}({{issue}}): {{pages}}. {{doi}}',
+          },
+        );
+      }
+      if (method === 'PATCH') {
+        const data = citationSettingsSchema.parse(await jsonBody(request));
+        return Response.json(
+          await db.citationSettings.upsert({
             where: { id: 'local' },
             create: { id: 'local', ...data },
             update: data,
@@ -135,6 +164,41 @@ async function handler(request: Request, context: Context): Promise<Response> {
     }
     idSchema.parse(id);
     const paper = await requirePaper(id);
+    if (child === 'reference' && !childId) {
+      if (method === 'GET') {
+        const record = await db.reference.findUnique({ where: { paperId: id } });
+        return Response.json(
+          record || {
+            type: 'journal',
+            title: paper.title,
+            authors: '',
+            year: '',
+            journal: '',
+            volume: '',
+            issue: '',
+            pages: '',
+            doi: '',
+            publisher: '',
+          },
+        );
+      }
+      if (method === 'PATCH') {
+        const { reference, settings } = referenceSaveSchema.parse(await jsonBody(request));
+        const [saved] = await db.$transaction([
+          db.reference.upsert({
+            where: { paperId: id },
+            create: { paperId: id, ...reference },
+            update: reference,
+          }),
+          db.citationSettings.upsert({
+            where: { id: 'local' },
+            create: { id: 'local', ...settings },
+            update: settings,
+          }),
+        ]);
+        return Response.json(saved);
+      }
+    }
     if (!child && method === 'GET') {
       await recoverInterrupted(id);
       const [fresh, notes, history] = await Promise.all([

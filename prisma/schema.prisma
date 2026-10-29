@@ -23,11 +23,34 @@ model Paper {
   chunks       ChunkCache[]
   notes        Note[]
   history      AiHistory[]
+  reference    Reference?
   shelfId      String?
   shelf        Bookshelf?     @relation(fields: [shelfId], references: [id], onDelete: SetNull)
 
   @@index([shelfId])
   @@index([createdAt])
+}
+
+model Reference {
+  paperId   String   @id
+  type      String   @default("journal")
+  title     String   @default("")
+  authors   String   @default("")
+  year      String   @default("")
+  journal   String   @default("")
+  volume    String   @default("")
+  issue     String   @default("")
+  pages     String   @default("")
+  doi       String   @default("")
+  publisher String   @default("")
+  updatedAt DateTime @updatedAt
+  paper     Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+}
+
+model CitationSettings {
+  id                String @id @default("local")
+  markerTemplate    String @default("[{{number}}]")
+  referenceTemplate String @default("[{{number}}] {{authors}}. {{title}}[{{type}}]. {{journal}}, {{year}}, {{volume}}({{issue}}): {{pages}}. {{doi}}")
 }
 
 model InsightReport {

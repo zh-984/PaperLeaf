@@ -51,6 +51,12 @@ describe('desktop local storage', () => {
     expect(upgraded.prepare("SELECT title FROM Paper WHERE id='keep'").get()?.title).toBe(
       '保留文献',
     );
+    expect(
+      upgraded.prepare("SELECT name FROM sqlite_master WHERE name='Reference'").get(),
+    ).toBeTruthy();
+    expect(
+      upgraded.prepare("SELECT name FROM sqlite_master WHERE name='CitationSettings'").get(),
+    ).toBeTruthy();
     upgraded.close();
     expect(
       readdirSync(path.dirname(database)).some((name) => name.startsWith('library.db.backup-')),

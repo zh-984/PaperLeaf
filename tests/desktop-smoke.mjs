@@ -87,6 +87,10 @@ try {
   if (!uploaded.ok())
     throw new Error(`Desktop PDF upload failed (${uploaded.status()}): ${await uploaded.text()}`);
   await expect(window.locator('main h1')).toHaveText('Paperleaf Synthetic Demo');
+  await window.getByRole('tab', { name: '文献引用' }).click();
+  await window.getByLabel('作者', { exact: true }).fill('Desktop Test Author');
+  await window.getByRole('button', { name: '保存引用信息' }).click();
+  await expect(window.locator('.citation-document').getByRole('status')).toContainText('已保存');
   await window.getByRole('tab', { name: /原文/ }).click();
   await expect(window.getByTestId('pdf-page')).toHaveClass(/ready/, { timeout: 30000 });
   await window.getByRole('button', { name: '下一页', exact: true }).click();
@@ -142,6 +146,8 @@ try {
   desktop = launched.instance;
   window = launched.window;
   await expect(window.locator('main h1')).toHaveText('Paperleaf Synthetic Demo');
+  await window.getByRole('tab', { name: '文献引用' }).click();
+  await expect(window.getByLabel('作者', { exact: true })).toHaveValue('Desktop Test Author');
   await window.getByRole('tab', { name: /原文/ }).click();
   await expect(window.getByTestId('pdf-page')).toHaveAttribute('data-page', '2');
   await expect(window.getByTestId('pdf-page')).toHaveClass(/ready/);

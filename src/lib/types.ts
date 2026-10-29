@@ -47,6 +47,22 @@ export interface Paper {
   updatedAt: string;
   report: InsightReport | null;
 }
+export interface ReferenceData {
+  type: 'journal' | 'book' | 'thesis' | 'conference' | 'web' | 'other';
+  title: string;
+  authors: string;
+  year: string;
+  journal: string;
+  volume: string;
+  issue: string;
+  pages: string;
+  doi: string;
+  publisher: string;
+}
+export interface CitationSettings {
+  markerTemplate: string;
+  referenceTemplate: string;
+}
 export interface Bookshelf {
   id: string;
   name: string;

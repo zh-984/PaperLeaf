@@ -86,6 +86,64 @@ export const askSchema = z
     '请先选中文字或输入问题',
   );
 export const reportInputSchema = z.object({ force: z.boolean().default(false) });
+const referenceText = z
+  .string()
+  .trim()
+  .max(500)
+  .refine((value) => !/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value), '不能包含控制字符');
+export const referenceSchema = z.object({
+  type: z.enum(['journal', 'book', 'thesis', 'conference', 'web', 'other']),
+  title: referenceText.min(1, '请填写标题'),
+  authors: referenceText,
+  year: referenceText,
+  journal: referenceText,
+  volume: referenceText,
+  issue: referenceText,
+  pages: referenceText,
+  doi: referenceText,
+  publisher: referenceText,
+});
+export const referenceSuggestionSchema = referenceSchema.extend({ title: referenceText });
+const citationFields = new Set([
+  'number',
+  'type',
+  'title',
+  'authors',
+  'year',
+  'journal',
+  'volume',
+  'issue',
+  'pages',
+  'doi',
+  'publisher',
+]);
+const validTemplate = (value: string) => {
+  const placeholders = [...value.matchAll(/\{\{([^{}]+)\}\}/g)];
+  return (
+    placeholders.every((match) => citationFields.has(match[1])) &&
+    !/[{}]/.test(value.replace(/\{\{[^{}]+\}\}/g, ''))
+  );
+};
+export const citationSettingsSchema = z.object({
+  markerTemplate: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .refine((v) => v.includes('{{number}}'), '标号格式必须包含 {{number}}')
+    .refine(validTemplate, '标号格式包含未知或不完整的占位符'),
+  referenceTemplate: z
+    .string()
+    .trim()
+    .min(1)
+    .max(1000)
+    .refine((v) => v.includes('{{title}}'), '参考文献格式必须包含 {{title}}')
+    .refine(validTemplate, '参考文献格式包含未知或不完整的占位符'),
+});
+export const referenceSaveSchema = z.object({
+  reference: referenceSchema,
+  settings: citationSettingsSchema,
+});
 export const modelSectionSchema = z.object({
   conclusion: z.string().trim().min(1).max(2000),
   points: z

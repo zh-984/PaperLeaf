@@ -3567,6 +3567,85 @@ textarea::placeholder {
 .chat-answer > p {
   line-height: 1.4;
 }
+.citation-scroll {
+  height: 100%;
+  overflow: auto;
+  background: #fff;
+}
+.citation-document {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 44px 52px 80px;
+  color: #000;
+}
+.citation-document h1 {
+  font-size: 30px;
+  margin: 24px 0 14px;
+}
+.citation-document h2 {
+  font-size: 21px;
+  margin: 36px 0 12px;
+}
+.citation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 24px 0 12px;
+}
+.citation-hint {
+  color: #62745d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.citation-warning {
+  background: #fff4df;
+  padding: 12px;
+  border-radius: 8px;
+}
+.citation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+.citation-grid label,
+.citation-formats label {
+  display: grid;
+  gap: 7px;
+  font-size: 14px;
+}
+.citation-grid label:nth-child(2),
+.citation-grid label:nth-child(3) {
+  grid-column: 1 / -1;
+}
+.citation-formats {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+.citation-preview {
+  margin-top: 20px;
+  background: #f5f7f1;
+  padding: 18px;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.citation-preview p {
+  margin-top: 10px;
+  line-height: 1.5;
+}
+@media (max-width: 720px) {
+  .citation-document {
+    padding: 24px;
+  }
+  .citation-grid {
+    grid-template-columns: 1fr;
+  }
+  .citation-grid label:nth-child(2),
+  .citation-grid label:nth-child(3) {
+    grid-column: auto;
+  }
+}
 .chat-compose textarea {
   min-height: 44px;
   padding-bottom: 4px;

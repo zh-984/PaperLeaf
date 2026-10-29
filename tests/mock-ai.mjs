@@ -39,9 +39,11 @@ const server = http.createServer(async (request, response) => {
   const system = body.messages[0].content;
   const task = system.includes('VISUAL_SUMMARY')
     ? 'visual-summary'
-    : system.includes('CHUNK_SUMMARY')
-      ? 'chunk-summary'
-      : system.match(/REPORT_SECTION (\w+)/)?.[1] || 'ask';
+    : system.includes('REFERENCE_METADATA')
+      ? 'reference-metadata'
+      : system.includes('CHUNK_SUMMARY')
+        ? 'chunk-summary'
+        : system.match(/REPORT_SECTION (\w+)/)?.[1] || 'ask';
   const input = body.messages
     .map((message) =>
       typeof message.content === 'string'
@@ -91,7 +93,20 @@ const server = http.createServer(async (request, response) => {
   }
   await new Promise((resolve) => setTimeout(resolve, delay));
   let content;
-  if (task === 'chunk-summary' || task === 'visual-summary')
+  if (task === 'reference-metadata')
+    content = JSON.stringify({
+      type: 'journal',
+      title: 'Suggested Title',
+      authors: 'Example Author',
+      year: '2025',
+      journal: 'Test Journal',
+      volume: '',
+      issue: '',
+      pages: '',
+      doi: '',
+      publisher: '',
+    });
+  else if (task === 'chunk-summary' || task === 'visual-summary')
     content =
       '[p.2] Methods: The method uses a controlled experiment. 研究比较结构化阅读。样本较小，外部效度不确定。保留研究问题、方法、结论和局限。';
   else if (task === 'ask' && input.includes('输出格式测试'))
