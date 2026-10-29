@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { fileSize } from '@/lib/utils';
+import { matchLinkedPapers } from '@/lib/linked-papers';
 import type {
   AiAction,
   AiHistory,
@@ -395,20 +396,35 @@ export function Workspace() {
     context: SelectionContext | null,
     question = '',
     selectedSlot = aiSlot,
-    linkedPaperIds: string[] = linkEnabled ? linkedIds : [],
   ) {
     setPanel(true);
     setPanelTab('chat');
-    if (!detail || askBusy) return;
+    if (!detail || askBusy) return false;
     if (!(
       settings?.aiProfiles?.find((item) => item.slot === selectedSlot)?.enabled ??
       (selectedSlot === 1 && settings?.aiEnabled)
     )) {
       notify('未配置 AI：阅读和笔记仍可使用，请在设置中查看配置说明');
-      return;
+      return false;
     }
-    if (action === 'question' && !question) return;
+    if (action === 'question' && !question) return false;
     const id = detail.id;
+    let linkedPaperIds = linkEnabled ? linkedIds : [];
+    if (linkEnabled && action === 'question') {
+      const matched = matchLinkedPapers(question, papers, id);
+      if (matched.ambiguous) {
+        notify('书架中有同名文献，请先重命名后再联动');
+        return false;
+      }
+      if (matched.ids.length > 8) {
+        notify('一次最多联动 8 篇文献，请减少问题中提到的文献');
+        return false;
+      }
+      if (matched.ids.length) {
+        linkedPaperIds = matched.ids;
+        setLinkedIds(matched.ids);
+      }
+    }
     setAskBusy(true);
     try {
       const item = await api<AiHistory>(`/api/ai/ask/${id}`, {
@@ -426,8 +442,10 @@ export function Workspace() {
       setDetail((current) =>
         current?.id === id ? { ...current, history: [...current.history, item] } : current,
       );
+      return true;
     } catch (cause) {
       notify(cause instanceof Error ? cause.message : '追问失败');
+      return false;
     } finally {
       setAskBusy(false);
     }
@@ -715,13 +733,13 @@ export function Workspace() {
                   <SidePanel
                     key={detail.id}
                     paper={detail}
-                    papers={papers}
                     aiSlot={aiSlot}
                     onAiSlot={setAiSlot}
                     linkEnabled={linkEnabled}
-                    onLinkEnabled={setLinkEnabled}
-                    linkedIds={linkedIds}
-                    onLinkedIds={setLinkedIds}
+                    onLinkEnabled={(enabled) => {
+                      setLinkEnabled(enabled);
+                      if (!enabled) setLinkedIds([]);
+                    }}
                     settings={settings}
                     selection={selection}
                     page={detail.lastPage}
@@ -730,9 +748,7 @@ export function Workspace() {
                     tab={panelTab}
                     onTab={setPanelTab}
                     onClose={() => setPanel(false)}
-                    onQuestion={async (question, slot, linkedPaperIds) => {
-                      await ask('question', selection, question, slot, linkedPaperIds);
-                    }}
+                    onQuestion={(question, slot) => ask('question', selection, question, slot)}
                     onSaveAnswer={async (item, withExcerpt) => {
                       await addNote(
                         item.answer,

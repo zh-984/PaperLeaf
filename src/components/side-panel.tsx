@@ -20,20 +20,16 @@ import type {
   PaperDetail,
   SelectionContext,
   ReadingAnchor,
-  Paper,
 } from '@/lib/types';
 import { Button } from './ui/button';
 import { NotesPanel } from './notes-panel';
 
 export function SidePanel({
   paper,
-  papers,
   aiSlot,
   onAiSlot,
   linkEnabled,
   onLinkEnabled,
-  linkedIds,
-  onLinkedIds,
   settings,
   selection,
   page,
@@ -52,13 +48,10 @@ export function SidePanel({
   onError,
 }: {
   paper: PaperDetail;
-  papers: Paper[];
   aiSlot: number;
   onAiSlot: (slot: number) => void;
   linkEnabled: boolean;
   onLinkEnabled: (enabled: boolean) => void;
-  linkedIds: string[];
-  onLinkedIds: React.Dispatch<React.SetStateAction<string[]>>;
   settings: AppSettings | null;
   selection: SelectionContext | null;
   page: number;
@@ -67,7 +60,7 @@ export function SidePanel({
   tab: 'chat' | 'notes';
   onTab: (tab: 'chat' | 'notes') => void;
   onClose: () => void;
-  onQuestion: (question: string, slot: number, linkedPaperIds: string[]) => Promise<void>;
+  onQuestion: (question: string, slot: number) => Promise<boolean>;
   onSaveAnswer: (item: AiHistory, withExcerpt: boolean) => Promise<void>;
   onAddNote: () => Promise<void>;
   onNoteSaved: (note: Note) => void;
@@ -77,15 +70,8 @@ export function SidePanel({
   onError: (message: string) => void;
 }) {
   const [question, setQuestion] = useState('');
-  const [linkSearch, setLinkSearch] = useState('');
   const profiles = settings?.aiProfiles?.filter((item) => item.enabled) || [];
   const currentProfile = profiles.find((item) => item.slot === aiSlot);
-  const candidates = papers.filter(
-    (item) =>
-      item.id !== paper.id &&
-      (linkedIds.includes(item.id) ||
-        (linkSearch.trim() && item.title.toLowerCase().includes(linkSearch.trim().toLowerCase()))),
-  );
   const [pendingQuestion, setPendingQuestion] = useState('');
   const historyRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -287,7 +273,7 @@ export function SidePanel({
                 setQuestion('');
                 setPendingQuestion(text);
                 try {
-                  await onQuestion(text, aiSlot, linkEnabled ? linkedIds : []);
+                  if (!(await onQuestion(text, aiSlot))) setQuestion((current) => current || text);
                 } finally {
                   setPendingQuestion('');
                 }
@@ -310,8 +296,19 @@ export function SidePanel({
                   }
                 }}
               />
-              <div>
-                <span>Enter 发送 · Shift + Enter 换行</span>
+              <p className="compose-hint">Enter 发送 · Shift + Enter 换行</p>
+              <div className="compose-actions">
+                <label
+                  className="link-toggle"
+                  title="勾选后，在问题中输入书架文献的完整标题；最多联动 8 篇，截取的文字会发送至所选 AI 服务。后续追问沿用这些文献。"
+                >
+                  <input
+                    type="checkbox"
+                    checked={linkEnabled}
+                    onChange={(event) => onLinkEnabled(event.target.checked)}
+                  />
+                  书架联动
+                </label>
                 <select
                   aria-label="选择回答模型"
                   value={aiSlot}
@@ -337,49 +334,6 @@ export function SidePanel({
               </div>
             </form>
             <p className="model-destination">追问发送至：{currentProfile?.host || '未配置 AI'}</p>
-            <label className="link-toggle">
-              <input
-                type="checkbox"
-                checked={linkEnabled}
-                onChange={(event) => onLinkEnabled(event.target.checked)}
-              />
-              书架联动
-            </label>
-            {linkEnabled && (
-              <div className="link-picker">
-                <input
-                  className="text-input"
-                  aria-label="搜索关联文献标题"
-                  placeholder="输入文献标题选择关联"
-                  value={linkSearch}
-                  onChange={(event) => setLinkSearch(event.target.value)}
-                />
-                <div className="link-results">
-                  {candidates.map((item) => (
-                    <label key={item.id}>
-                      <input
-                        type="checkbox"
-                        checked={linkedIds.includes(item.id)}
-                        disabled={!linkedIds.includes(item.id) && linkedIds.length >= 8}
-                        onChange={(event) =>
-                          onLinkedIds((ids) =>
-                            event.target.checked
-                              ? [...ids, item.id]
-                              : ids.filter((id) => id !== item.id),
-                          )
-                        }
-                      />
-                      <span>{item.title}</span>
-                    </label>
-                  ))}
-                </div>
-                <small>
-                  已选 {linkedIds.length}/8 篇，合计最多约 6000 字符；较长文献按页采样，文本将发送至{' '}
-                  {currentProfile?.host || '所选 AI 服务'}
-                  ，选区或问题较长时可能进一步截取，未提供的内容可能遗漏。
-                </small>
-              </div>
-            )}
             <p className="ai-disclaimer">AI 可能出错，请带着判断回到原文。</p>
           </div>
         </>

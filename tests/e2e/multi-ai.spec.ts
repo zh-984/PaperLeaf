@@ -42,8 +42,11 @@ test('three private configurations, selected model and explicitly linked literat
       })
     ).status(),
   ).toBe(400);
-  const upload = async (title: string) => {
-    const r = await request.post(base + '/api/papers', {
+  const shelf = await (
+    await request.post(base + '/api/bookshelves', { data: { name: 'Other project' } })
+  ).json();
+  const upload = async (title: string, shelfId?: string) => {
+    const r = await request.post(base + '/api/papers' + (shelfId ? `?shelfId=${shelfId}` : ''), {
       multipart: {
         file: {
           name: `${title}.pdf`,
@@ -55,7 +58,7 @@ test('three private configurations, selected model and explicitly linked literat
     expect(r.ok()).toBe(true);
     return r.json();
   };
-  const linked = await upload('Linked Reference'),
+  const linked = await upload('Linked Reference', shelf.id),
     current = await upload('Current Paper');
   try {
     await page.goto(`${base}/?paper=${current.id}`);
@@ -73,13 +76,15 @@ test('three private configurations, selected model and explicitly linked literat
     await page.getByRole('button', { name: '打开追问面板', exact: true }).click();
     await page.getByLabel('选择回答模型').selectOption('2');
     await page.getByText('书架联动', { exact: true }).click();
-    await page.getByLabel('搜索关联文献标题').fill('Linked Reference');
-    await page.getByLabel('Linked Reference', { exact: true }).check();
-    await expect(page.getByText(/已选 1\/8 篇/)).toContainText('127.0.0.1:4123');
-    await page.getByLabel('追问问题').fill('比较两篇文献');
+    await expect(page.getByLabel('搜索关联文献标题')).toHaveCount(0);
+    await expect(page.locator('.link-picker')).toHaveCount(0);
+    await expect(page.getByText('追问发送至：127.0.0.1:4123')).toBeVisible();
+    await expect(page.getByLabel('选择回答模型')).toHaveCSS('font-size', '11px');
+    await page.getByLabel('追问问题').fill('比较当前文献和 Linked Reference');
+    if (process.env.PAPERLEAF_CAPTURE) await page.screenshot({ path: 'test-results/compose.png' });
     await page.getByRole('button', { name: '发送追问' }).click();
     await expect(page.locator('.chat-answer')).toHaveCount(1);
-    await expect(page.locator('.chat-answer > p')).toHaveCSS('line-height', '16.8px');
+    await expect(page.locator('.chat-answer > p')).toHaveCSS('line-height', '19.6px');
     let calls = (await (await request.get(mock + '/stats')).json()).calls.filter(
       (c: { task: string }) => c.task === 'ask',
     );
@@ -105,7 +110,7 @@ test('three private configurations, selected model and explicitly linked literat
     );
     expect(calls.at(-1)).toMatchObject({ model: 'test-alt-renamed', hasLinkedSource: true });
     await page.getByText('书架联动', { exact: true }).click();
-    await page.getByLabel('追问问题').fill('只问当前文献');
+    await page.getByLabel('追问问题').fill('只问当前文献和 Linked Reference');
     await page.getByRole('button', { name: '发送追问' }).click();
     await expect(page.locator('.chat-answer')).toHaveCount(3);
     calls = (await (await request.get(mock + '/stats')).json()).calls.filter(
@@ -124,6 +129,7 @@ test('three private configurations, selected model and explicitly linked literat
     expect(bad.status()).toBe(400);
   } finally {
     for (const item of [linked, current]) await request.delete(`${base}/api/papers/${item.id}`);
+    await request.delete(`${base}/api/bookshelves/${shelf.id}`);
     for (const slot of [2, 3])
       await request.post(base + '/api/settings', {
         data: { slot, baseUrl: mock + '/v1', model: 'test-unused', clearKey: true },
