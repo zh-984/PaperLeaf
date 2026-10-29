@@ -3571,12 +3571,6 @@ textarea::placeholder {
   min-height: 44px;
   padding-bottom: 4px;
 }
-.chat-compose .compose-hint {
-  padding: 0 12px;
-  margin: 0 0 6px;
-  color: #879477;
-  font-size: 11px;
-}
 .chat-compose form > .compose-actions {
   justify-content: flex-end;
   gap: 6px;
@@ -3601,11 +3595,4 @@ textarea::placeholder {
 }
 .link-toggle input {
   margin: 0;
-}
-
-.model-destination {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: var(--muted);
-  overflow-wrap: anywhere;
 }

@@ -23,6 +23,7 @@ import type {
 } from '@/lib/types';
 import { Button } from './ui/button';
 import { NotesPanel } from './notes-panel';
+import { cleanAnswerText } from '@/lib/answer-text';
 
 export function SidePanel({
   paper,
@@ -71,7 +72,6 @@ export function SidePanel({
 }) {
   const [question, setQuestion] = useState('');
   const profiles = settings?.aiProfiles?.filter((item) => item.enabled) || [];
-  const currentProfile = profiles.find((item) => item.slot === aiSlot);
   const [pendingQuestion, setPendingQuestion] = useState('');
   const historyRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -99,7 +99,7 @@ export function SidePanel({
   }
   async function copy(item: AiHistory) {
     try {
-      await navigator.clipboard.writeText(item.answer);
+      await navigator.clipboard.writeText(cleanAnswerText(item.answer));
       setCopied(item.id);
       setTimeout(() => setCopied(null), 2000);
     } catch {
@@ -199,7 +199,7 @@ export function SidePanel({
                     <Sparkles size={13} />
                     知页
                   </span>
-                  <p>{item.answer}</p>
+                  <p>{cleanAnswerText(item.answer)}</p>
                   <div className="answer-actions">
                     <button onClick={() => void copy(item)}>
                       {copied === item.id ? <Check size={12} /> : <Copy size={12} />}
@@ -210,7 +210,10 @@ export function SidePanel({
                       onClick={async () => {
                         setSaving(item.id);
                         try {
-                          await onSaveAnswer(item, false);
+                          await onSaveAnswer(
+                            { ...item, answer: cleanAnswerText(item.answer) },
+                            false,
+                          );
                         } finally {
                           setSaving(null);
                         }
@@ -225,7 +228,10 @@ export function SidePanel({
                         onClick={async () => {
                           setSaving(item.id);
                           try {
-                            await onSaveAnswer(item, true);
+                            await onSaveAnswer(
+                              { ...item, answer: cleanAnswerText(item.answer) },
+                              true,
+                            );
                           } finally {
                             setSaving(null);
                           }
@@ -296,11 +302,10 @@ export function SidePanel({
                   }
                 }}
               />
-              <p className="compose-hint">Enter 发送 · Shift + Enter 换行</p>
               <div className="compose-actions">
                 <label
                   className="link-toggle"
-                  title="勾选后，在问题中输入书架文献的完整标题；最多联动 8 篇，截取的文字会发送至所选 AI 服务。后续追问沿用这些文献。"
+                  title="勾选后，在问题中输入文献完整标题，可在标题前写明书架名称；最多联动 8 篇，截取文字会发送至所选 AI 服务。后续追问沿用这些文献。"
                 >
                   <input
                     type="checkbox"
@@ -319,7 +324,7 @@ export function SidePanel({
                   )}
                   {profiles.map((item) => (
                     <option key={item.slot} value={item.slot}>
-                      {item.model} · 配置 {item.slot}
+                      {item.model}
                     </option>
                   ))}
                 </select>
@@ -333,7 +338,6 @@ export function SidePanel({
                 </Button>
               </div>
             </form>
-            <p className="model-destination">追问发送至：{currentProfile?.host || '未配置 AI'}</p>
             <p className="ai-disclaimer">AI 可能出错，请带着判断回到原文。</p>
           </div>
         </>

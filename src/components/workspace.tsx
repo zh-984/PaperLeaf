@@ -411,10 +411,26 @@ export function Workspace() {
     const id = detail.id;
     let linkedPaperIds = linkEnabled ? linkedIds : [];
     if (linkEnabled && action === 'question') {
-      const matched = matchLinkedPapers(question, papers, id);
+      const matched = matchLinkedPapers(question, papers, id, shelves);
       if (matched.ambiguous) {
-        notify('书架中有同名文献，请先重命名后再联动');
+        notify('书架中有同名文献，请在标题前写明所属书架');
         return false;
+      }
+      if (matched.shelfMismatch) {
+        notify('指定书架中没有匹配的文献，请检查书架名称和完整标题');
+        return false;
+      }
+      if (matched.shelfMentioned && !matched.ids.length) {
+        const fromMentionedShelves = linkedIds.filter((linkedId) => {
+          const linkedPaper = papers.find((item) => item.id === linkedId);
+          return linkedPaper && matched.mentionedShelfIds.includes(linkedPaper.shelfId || null);
+        });
+        if (!fromMentionedShelves.length) {
+          notify('请在问题中输入要联动文献的完整标题');
+          return false;
+        }
+        linkedPaperIds = fromMentionedShelves;
+        setLinkedIds(fromMentionedShelves);
       }
       if (matched.ids.length > 8) {
         notify('一次最多联动 8 篇文献，请减少问题中提到的文献');

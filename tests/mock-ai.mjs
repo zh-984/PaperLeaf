@@ -67,6 +67,8 @@ const server = http.createServer(async (request, response) => {
     generalKnowledgeAllowed: system.includes('一般知识') && system.includes('不要编造文献依据'),
     model: body.model,
     hasLinkedSource: input.includes('关联文献：《Linked Reference》'),
+    hasLinkedShelf: input.includes('书架：111\n关联文献：《Linked Reference》'),
+    hasDefaultLinkedSource: input.includes('书架：默认书架\n关联文献：《Linked Reference》'),
   };
   calls.push(call);
   if (task === 'visual-summary') {
@@ -92,6 +94,8 @@ const server = http.createServer(async (request, response) => {
   if (task === 'chunk-summary' || task === 'visual-summary')
     content =
       '[p.2] Methods: The method uses a controlled experiment. 研究比较结构化阅读。样本较小，外部效度不确定。保留研究问题、方法、结论和局限。';
+  else if (task === 'ask' && input.includes('输出格式测试'))
+    content = '## 结论\n1. **Word 引用联动（p.3）**：引用格式清晰。\n* 保留公式 x*y。';
   else if (task === 'ask' && input.includes('特朗普是谁'))
     content = '原文未提到特朗普。一般知识：唐纳德·特朗普是一名美国政治人物和商人。（本地模拟回答）';
   else if (task === 'ask')
