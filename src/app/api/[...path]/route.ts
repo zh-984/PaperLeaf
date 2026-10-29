@@ -79,6 +79,23 @@ async function handler(request: Request, context: Context): Promise<Response> {
         aiBaseUrl: config.baseUrl,
         aiHasKey: Boolean(config.apiKey),
         aiVisionEnabled: supportsVisionModel(config.model),
+        aiProfiles: [1, 2, 3].map((slot) => {
+          const item = getAiConfig(slot);
+          let host = '';
+          try {
+            host = new URL(item.baseUrl).host;
+          } catch {
+            /* Invalid configuration is reported when used. */
+          }
+          return {
+            slot,
+            model: item.model,
+            baseUrl: item.baseUrl,
+            host,
+            enabled: item.enabled,
+            hasKey: Boolean(item.apiKey),
+          };
+        }),
         aiHost,
         maxUploadFiles,
         maxUploadMB,

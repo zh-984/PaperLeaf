@@ -136,7 +136,10 @@ const PdfPage = memo(function PdfPage({
     if (ready && jump?.page === number && jump.quote && !jump.anchor && textRef.current) {
       highlightQuote(textRef.current, jump.quote, highlighted.current !== jump.nonce);
       highlighted.current = jump.nonce;
-    }
+    } else if (textRef.current)
+      textRef.current
+        .querySelectorAll('.evidence-highlight')
+        .forEach((element) => element.classList.remove('evidence-highlight'));
   }, [ready, jump, number]);
   const related = numberedNotes(notes).filter(
     ({ note }) =>
@@ -559,6 +562,7 @@ export function PdfReader({
             onClick={() => {
               onNoteCreate(selection);
               setSelection(null);
+              window.getSelection()?.removeAllRanges();
             }}
           >
             <FilePenLine size={15} />
@@ -570,6 +574,7 @@ export function PdfReader({
               onClick={() => {
                 onAsk(action, selection);
                 setSelection(null);
+                window.getSelection()?.removeAllRanges();
               }}
             >
               <Icon size={15} />

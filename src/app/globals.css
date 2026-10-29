@@ -3563,3 +3563,68 @@ textarea::placeholder {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.chat-answer > p {
+  line-height: 1.2;
+}
+.chat-compose form > div {
+  gap: 6px;
+}
+.chat-compose form > div > span {
+  flex: 1;
+  min-width: 0;
+}
+.chat-compose select {
+  max-width: 46%;
+  min-width: 0;
+  padding: 5px;
+  background: #fff;
+  color: #000;
+  border: 1px solid var(--chrome-border);
+  border-radius: 5px;
+}
+.link-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  font-size: 13px;
+  color: #000;
+}
+.link-picker {
+  margin-top: 7px;
+}
+.link-picker > input {
+  width: 100%;
+}
+.link-results {
+  max-height: 120px;
+  overflow-y: auto;
+}
+.link-results label {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  padding: 5px 1px;
+  font-size: 12px;
+  color: #000;
+  overflow-wrap: anywhere;
+}
+.link-results input {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.link-picker small {
+  display: block;
+  color: #586158;
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 5px;
+}
+
+.model-destination {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}

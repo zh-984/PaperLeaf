@@ -65,6 +65,8 @@ const server = http.createServer(async (request, response) => {
     images,
     failed: false,
     generalKnowledgeAllowed: system.includes('一般知识') && system.includes('不要编造文献依据'),
+    model: body.model,
+    hasLinkedSource: input.includes('关联文献：《Linked Reference》'),
   };
   calls.push(call);
   if (task === 'visual-summary') {

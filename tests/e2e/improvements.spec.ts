@@ -90,7 +90,7 @@ test('AI configuration needs only API details and model, with immediate applicat
   await dialog.getByLabel(/API Key/).fill('local-test-key-not-a-real-secret');
   await dialog.getByLabel('模型名称').fill('test-simulator');
   await dialog.getByRole('button', { name: '保存 AI 配置' }).click();
-  await expect(dialog.getByText('已保存，立即生效。可以回到文献生成解读。')).toBeVisible();
+  await expect(dialog.getByText('已保存，立即生效。配置 1 用于整篇解读和追问。')).toBeVisible();
   const config = await (await request.get(`${base}/api/settings`)).json();
   expect(config.aiEnabled).toBe(true);
   expect(JSON.stringify(config)).not.toContain('local-test-key');

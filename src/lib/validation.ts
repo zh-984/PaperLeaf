@@ -73,6 +73,12 @@ export const askSchema = z
     action: z.enum(['translate', 'explain', 'term', 'question']),
     question: z.string().trim().max(2000).default(''),
     anchor: anchorSchema.nullable().optional(),
+    aiSlot: z.number().int().min(1).max(3).default(1),
+    linkedPaperIds: z
+      .array(idSchema)
+      .max(8)
+      .default([])
+      .refine((ids) => new Set(ids).size === ids.length, '关联文献不能重复'),
   })
   .refine(
     (value) =>

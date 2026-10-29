@@ -110,6 +110,14 @@ export interface AppSettings {
   aiBaseUrl?: string;
   aiHasKey?: boolean;
   aiVisionEnabled?: boolean;
+  aiProfiles?: {
+    slot: number;
+    model: string;
+    baseUrl: string;
+    host: string;
+    enabled: boolean;
+    hasKey: boolean;
+  }[];
 }
 export interface PageText {
   page: number;

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { dataDir } from '../config';
 
 export const aiSettingsSchema = z.object({
+  slot: z.number().int().min(1).max(3).default(1),
   baseUrl: z
     .string()
     .trim()
@@ -49,30 +50,37 @@ export function normalizeBaseUrl(value: string) {
   if (url.pathname === '/') url.pathname = '/v1';
   return url.href.replace(/\/+$/, '');
 }
-export function getAiConfig() {
+export function getAiConfig(slot = 1) {
   const file = configFilePath();
   const saved = existsSync(file) ? parse(readFileSync(file)) : {};
-  const apiKey = saved.OPENAI_API_KEY ?? process.env.OPENAI_API_KEY ?? '';
+  const prefix = slot === 1 ? '' : `PROFILE_${slot}_`;
+  const lookup = (key: string) =>
+    saved[prefix + key] ?? (slot === 1 ? process.env[key] : undefined);
+  const apiKey = lookup('OPENAI_API_KEY') ?? '';
   return {
     apiKey,
-    model: saved.OPENAI_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini',
-    baseUrl: (
-      saved.OPENAI_BASE_URL ||
-      process.env.OPENAI_BASE_URL ||
-      'https://api.openai.com/v1'
-    ).replace(/\/+$/, ''),
-    enabled: Boolean(apiKey.trim()) && (saved.AI_ENABLED ?? process.env.AI_ENABLED) !== 'false',
+    model: lookup('OPENAI_MODEL') || (slot === 1 ? 'gpt-4o-mini' : ''),
+    baseUrl: (lookup('OPENAI_BASE_URL') || 'https://api.openai.com/v1').replace(/\/+$/, ''),
+    enabled: Boolean(apiKey.trim()) && lookup('AI_ENABLED') !== 'false',
   };
 }
 export function saveAiConfig(input: z.infer<typeof aiSettingsSchema>) {
-  const previous = getAiConfig();
+  const previous = getAiConfig(input.slot);
   const key = input.clearKey ? '' : input.apiKey || previous.apiKey;
   const file = configFilePath();
   mkdirSync(path.dirname(file), { recursive: true });
   const temporary = `${file}.${randomUUID()}.tmp`;
+  const saved = existsSync(file) ? parse(readFileSync(file)) : {};
+  const prefix = input.slot === 1 ? '' : `PROFILE_${input.slot}_`;
+  saved[`${prefix}AI_ENABLED`] = key ? 'true' : 'false';
+  saved[`${prefix}OPENAI_BASE_URL`] = normalizeBaseUrl(input.baseUrl);
+  saved[`${prefix}OPENAI_API_KEY`] = key;
+  saved[`${prefix}OPENAI_MODEL`] = input.model;
   writeFileSync(
     temporary,
-    `# 知页：通过应用内 AI 配置修改。阅读参数已预设。\nAI_ENABLED=${key ? 'true' : 'false'}\nOPENAI_BASE_URL=${JSON.stringify(normalizeBaseUrl(input.baseUrl))}\nOPENAI_API_KEY=${JSON.stringify(key)}\nOPENAI_MODEL=${JSON.stringify(input.model)}\n`,
+    `# 知页：AI 配置保存在本机。\n${Object.entries(saved)
+      .map(([name, value]) => `${name}=${JSON.stringify(value)}`)
+      .join('\n')}\n`,
     { mode: 0o600 },
   );
   renameSync(temporary, file);

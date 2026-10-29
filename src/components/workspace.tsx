@@ -83,6 +83,9 @@ export function Workspace() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [jump, setJump] = useState<JumpTarget | null>(null);
   const [askBusy, setAskBusy] = useState(false);
+  const [aiSlot, setAiSlot] = useState(1);
+  const [linkEnabled, setLinkEnabled] = useState(false);
+  const [linkedIds, setLinkedIds] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [toast, setToast] = useState<{ message: string; success: boolean } | null>(null);
   const [editing, setEditing] = useState<Paper | null>(null);
@@ -160,6 +163,8 @@ export function Workspace() {
       setView(preferencesRef.current.defaultView);
       setSelection(null);
       setJump(null);
+      setLinkEnabled(false);
+      setLinkedIds([]);
       try {
         const paper = await api<PaperDetail>(`/api/papers/${id}`);
         if (request !== requestNumber.current) return;
@@ -385,11 +390,20 @@ export function Workspace() {
   function evidence(point: EvidencePoint) {
     if (point.page) jumpTo(point.page, point.quote);
   }
-  async function ask(action: AiAction, context: SelectionContext | null, question = '') {
+  async function ask(
+    action: AiAction,
+    context: SelectionContext | null,
+    question = '',
+    selectedSlot = aiSlot,
+    linkedPaperIds: string[] = linkEnabled ? linkedIds : [],
+  ) {
     setPanel(true);
     setPanelTab('chat');
     if (!detail || askBusy) return;
-    if (!settings?.aiEnabled) {
+    if (!(
+      settings?.aiProfiles?.find((item) => item.slot === selectedSlot)?.enabled ??
+      (selectedSlot === 1 && settings?.aiEnabled)
+    )) {
       notify('未配置 AI：阅读和笔记仍可使用，请在设置中查看配置说明');
       return;
     }
@@ -405,6 +419,8 @@ export function Workspace() {
           selectedText: context?.text || '',
           anchor: context?.anchor,
           page: context?.page || detail.lastPage,
+          aiSlot: selectedSlot,
+          linkedPaperIds,
         }),
       });
       setDetail((current) =>
@@ -465,6 +481,9 @@ export function Workspace() {
     const paperId = activeId.current;
     if (!paperId) return;
     await api(`/api/papers/${paperId}/notes/${id}`, { method: 'DELETE' });
+    setActiveNoteId((current) => (current === id ? null : current));
+    setJump(null);
+    window.getSelection()?.removeAllRanges();
     setDetail((current) =>
       current?.id === paperId
         ? { ...current, notes: current.notes.filter((note) => note.id !== id) }
@@ -696,6 +715,13 @@ export function Workspace() {
                   <SidePanel
                     key={detail.id}
                     paper={detail}
+                    papers={papers}
+                    aiSlot={aiSlot}
+                    onAiSlot={setAiSlot}
+                    linkEnabled={linkEnabled}
+                    onLinkEnabled={setLinkEnabled}
+                    linkedIds={linkedIds}
+                    onLinkedIds={setLinkedIds}
                     settings={settings}
                     selection={selection}
                     page={detail.lastPage}
@@ -704,8 +730,8 @@ export function Workspace() {
                     tab={panelTab}
                     onTab={setPanelTab}
                     onClose={() => setPanel(false)}
-                    onQuestion={async (question) => {
-                      await ask('question', selection, question);
+                    onQuestion={async (question, slot, linkedPaperIds) => {
+                      await ask('question', selection, question, slot, linkedPaperIds);
                     }}
                     onSaveAnswer={async (item, withExcerpt) => {
                       await addNote(
@@ -722,7 +748,11 @@ export function Workspace() {
                     onNoteSaved={noteSaved}
                     onDeleteNote={deleteNote}
                     onJump={jumpTo}
-                    onClearSelection={() => setSelection(null)}
+                    onClearSelection={() => {
+                      setSelection(null);
+                      setJump(null);
+                      window.getSelection()?.removeAllRanges();
+                    }}
                     onError={onError}
                   />
                 )}
