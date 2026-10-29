@@ -5,7 +5,7 @@
 中文界面，不需要账号。未配置 AI 时，书架、PDF 阅读、页码记忆和笔记均可独立使用。没有标签系统、BibTeX、云同步或统计追踪。
 
 <p align="center">
-  <img src="docs/images/readme-home.png" alt="知页 Paperleaf 的首页和文献导入入口" width="100%" />
+  <img src="docs/images/readme-home.png" alt="知页 Paperleaf 的首页和文献导入入口" width="66.67%" />
 </p>
 
 ## Windows 桌面版（无需命令行）
@@ -94,7 +94,7 @@ Word 引用和文末参考文献联动目前仅规划，路线、数据模型与
 ## 怎么使用
 
 <p align="center">
-  <img src="docs/images/readme-import.png" alt="导入文献后的解读报告和追问面板" width="100%" />
+  <img src="docs/images/readme-import.png" alt="导入文献后的解读报告和追问面板" width="66.67%" />
 </p>
 
 没有现成 PDF 时，可使用 [examples/sample-paper.pdf](examples/sample-paper.pdf)。它是明确标注的三页合成演示文档，不是真实论文。
