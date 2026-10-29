@@ -10,7 +10,7 @@ test('short and long section outputs finish the demo report, while general chat 
     data: { autoInterpret: false, defaultView: 'report', theme: 'blue' },
   });
   await request.post(`${mock}/control`, {
-    data: { delay: 100, pointCounts: { findings: 1, terms: 0, questions: 7 } },
+    data: { delay: 100, pointCounts: { findings: 7, background: 1, terms: 0, questions: 7 } },
   });
   try {
     await page.goto(base);
@@ -24,6 +24,9 @@ test('short and long section outputs finish the demo report, while general chat 
     expect(data.report.sections).toHaveLength(10);
     expect(
       data.report.sections.find((s: { key: string }) => s.key === 'findings').points,
+    ).toHaveLength(5);
+    expect(
+      data.report.sections.find((s: { key: string }) => s.key === 'background').points,
     ).toHaveLength(1);
     expect(
       data.report.sections.find((s: { key: string }) => s.key === 'terms').points[0],
