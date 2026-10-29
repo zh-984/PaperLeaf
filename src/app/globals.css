@@ -1643,6 +1643,29 @@ svg {
   margin-top: 7px;
   line-height: 1.9;
 }
+.chat-question {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: auto;
+  max-width: 90%;
+}
+.chat-question > p {
+  max-width: 100%;
+  background: var(--chrome-active);
+  border-radius: 14px 14px 3px 14px;
+  padding: 9px 12px;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chat-question blockquote {
+  max-width: 100%;
+  background: var(--chrome-hover);
+}
+.chat-pending {
+  padding-top: 18px;
+}
 .chat-question blockquote {
   border-left: 2px solid #d4dfc2;
   margin: 9px 0;

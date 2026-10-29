@@ -4,7 +4,7 @@
 
 ## 安装与打开
 
-1. 从 [GitHub Releases](https://github.com/zh-984/PaperLeaf/releases/latest) 下载 `Paperleaf-Setup-0.6.1-x64.exe`，然后双击运行。
+1. 从 [GitHub Releases](https://github.com/zh-984/PaperLeaf/releases/latest) 下载 `Paperleaf-Setup-0.7.0-x64.exe`，然后双击运行。
 2. 按向导安装到当前用户目录。默认不需要管理员权限。
 3. 双击桌面的 **知页 Paperleaf**，或从开始菜单打开。
 

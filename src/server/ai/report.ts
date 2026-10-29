@@ -175,15 +175,15 @@ export async function runReport(id: string, force: boolean, signal: AbortSignal)
       } catch {
         throw new ApiError(502, `「${title}」返回的结构无效，点击继续解读重试；其他板块已缓存`);
       }
-      const minimum = key === 'terms' ? 5 : key === 'questions' ? 3 : 2;
       const maximum = key === 'terms' ? 10 : 5;
-      if (parsed.points.length < minimum || parsed.points.length > maximum)
-        throw new ApiError(502, `「${title}」条目数量不符合要求，请继续解读重试`);
+      const points = parsed.points.slice(0, maximum);
+      if (!points.length)
+        points.push({ text: '未提取到可靠要点，请核对原文（不确定）。', page: null, quote: '' });
       const section: ReportSection = {
         key,
         title,
         conclusion: parsed.conclusion,
-        points: parsed.points.map((point) => verifyEvidence(point, pages)),
+        points: points.map((point) => verifyEvidence(point, pages)),
       };
       sections = [...sections, section];
       await db.insightReport.update({

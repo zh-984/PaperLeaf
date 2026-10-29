@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { askSchema } from '@/lib/validation';
 import { getPages, requirePaper } from '../papers';
-import { completion, evidenceInstruction, requireAi, type Message } from './client';
+import { completion, requireAi, type Message } from './client';
 import { db } from '../db';
 import { ApiError } from '../http';
 import { aiMaxInput } from '../config';
@@ -36,7 +36,8 @@ export async function askPaper(id: string, input: z.infer<typeof askSchema>, sig
   const messages: Message[] = [
     {
       role: 'system',
-      content: `${evidenceInstruction}\n请先给一句话结论，再列2~5个要点。引用或复述原文关键片段，并标注当前页。只知道当前页和对话范围，涉及其他页且没有证据时说明“不确定”。`,
+      content:
+        '你是文献阅读助手，也可以回答用户的一般问题。先回答用户真正的问题，再视需要关联当前文献；如果问题与文献无关，不必强行引用原文。请区分原文内容与一般知识：原文未提到的信息可以依据已有知识回答，并说明不是来自原文；不要编造文献依据或页码。讨论文献时，优先引用或复述可核实的当前页内容并标注页码；其他页无依据时说明不确定。无法确定或可能已经变化的事实应如实说明，不能假装掌握实时信息。回答先给一句话结论，再按需要列要点。',
     },
     {
       role: 'user',
@@ -80,7 +81,7 @@ export async function askPaper(id: string, input: z.infer<typeof askSchema>, sig
       content: [
         {
           type: 'text',
-          text: `[p.${input.page}] 当前页图像，请结合页面图表核对；读不清的内容不要猜测。`,
+          text: `[p.${input.page}] 当前页图像。问题涉及文献时可用来核对；一般问题可直接回答。读不清的内容不要猜测。`,
         },
         { type: 'image_url', image_url: { url: image.url } },
       ],

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowUp,
   ArrowUpRight,
@@ -62,6 +62,12 @@ export function SidePanel({
   onError: (message: string) => void;
 }) {
   const [question, setQuestion] = useState('');
+  const [pendingQuestion, setPendingQuestion] = useState('');
+  const historyRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (tab === 'chat' && historyRef.current)
+      historyRef.current.scrollTop = historyRef.current.scrollHeight;
+  }, [tab, paper.id, paper.history.length, pendingQuestion, busy]);
   const [copied, setCopied] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [panelWidth, setPanelWidth] = useState(320);
@@ -146,8 +152,8 @@ export function SidePanel({
             </span>
             <small>{settings?.aiEnabled ? settings.aiModel : '未配置 AI'}</small>
           </div>
-          <div className="chat-history" aria-live="polite">
-            {!paper.history.length && (
+          <div className="chat-history" aria-live="polite" ref={historyRef}>
+            {!paper.history.length && !pendingQuestion && (
               <div className="panel-empty">
                 <span className="chat-empty-icon">
                   <Sparkles size={25} strokeWidth={1.3} />
@@ -224,6 +230,12 @@ export function SidePanel({
                 </div>
               </article>
             ))}
+            {pendingQuestion && (
+              <div className="chat-question chat-pending">
+                <span>你 · p.{selection?.page || page}</span>
+                <p>{pendingQuestion}</p>
+              </div>
+            )}
             {busy && (
               <div className="chat-thinking" role="status">
                 <LoaderCircle size={15} className="spin" />
@@ -250,7 +262,12 @@ export function SidePanel({
                 if (!question.trim() || busy) return;
                 const text = question;
                 setQuestion('');
-                await onQuestion(text);
+                setPendingQuestion(text);
+                try {
+                  await onQuestion(text);
+                } finally {
+                  setPendingQuestion('');
+                }
               }}
             >
               <textarea

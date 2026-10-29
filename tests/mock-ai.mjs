@@ -7,6 +7,7 @@ let summaryCount = 0;
 let delay = 350;
 let failVisualAt = 0;
 let visualCount = 0;
+let pointCounts = {};
 const server = http.createServer(async (request, response) => {
   const send = (status, value) => {
     response.writeHead(status, { 'Content-Type': 'application/json' });
@@ -26,6 +27,7 @@ const server = http.createServer(async (request, response) => {
     delay = input.delay ?? 350;
     failVisualAt = input.failVisualAt || 0;
     visualCount = 0;
+    pointCounts = input.pointCounts || {};
     send(200, { ok: true });
     return;
   }
@@ -56,7 +58,14 @@ const server = http.createServer(async (request, response) => {
     0,
   );
   const hash = createHash('sha256').update(input).digest('hex');
-  const call = { task, hash, inputLength: input.length, images, failed: false };
+  const call = {
+    task,
+    hash,
+    inputLength: input.length,
+    images,
+    failed: false,
+    generalKnowledgeAllowed: system.includes('一般知识') && system.includes('不要编造文献依据'),
+  };
   calls.push(call);
   if (task === 'visual-summary') {
     visualCount++;
@@ -81,11 +90,13 @@ const server = http.createServer(async (request, response) => {
   if (task === 'chunk-summary' || task === 'visual-summary')
     content =
       '[p.2] Methods: The method uses a controlled experiment. 研究比较结构化阅读。样本较小，外部效度不确定。保留研究问题、方法、结论和局限。';
+  else if (task === 'ask' && input.includes('特朗普是谁'))
+    content = '原文未提到特朗普。一般知识：唐纳德·特朗普是一名美国政治人物和商人。（本地模拟回答）';
   else if (task === 'ask')
     content =
       '一句话结论：这段原文说明作者采用了对照实验。\n\n- 原文关键片段：“The method uses a controlled experiment.”（p.2）\n- 通俗地说，比较不同条件下的表现。\n- 不确定：当前页没有说明样本是否足以推广。\n\n（本地自动化测试模拟回答）';
   else {
-    const count = task === 'terms' ? 5 : task === 'questions' ? 3 : 2;
+    const count = pointCounts[task] ?? (task === 'terms' ? 5 : task === 'questions' ? 3 : 2);
     content = JSON.stringify({
       conclusion: `模拟解读：${task} 板块先说明研究结论，细节请回到原文核对。`,
       points: Array.from({ length: count }, (_, index) => ({

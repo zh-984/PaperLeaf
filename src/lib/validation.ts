@@ -90,6 +90,5 @@ export const modelSectionSchema = z.object({
         quote: z.string().max(1000).default(''),
       }),
     )
-    .min(2)
-    .max(10),
+    .max(50),
 });
