@@ -10,12 +10,13 @@ try {
   $settings = @{ markerTemplate='[{{number}}]'; referenceTemplate='[{{number}}] {{authors}}. {{title}}. {{year}}.' }
   function Run-Bridge([string]$action, [string]$id, [string]$title) {
     $request = @{action=$action; settings=$settings; reference=@{paperId=$id; title=$title; type='journal'; authors='Tester'; year='2025'; journal=''; volume=''; issue=''; pages=''; doi=''; publisher=''}} | ConvertTo-Json -Depth 8 -Compress
-    $output = $request | & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'word-bridge.ps1')
+    $output = $request | & node (Join-Path $PSScriptRoot '../../tests/word-invoke.mjs')
     if ($LASTEXITCODE -ne 0) { throw 'Word bridge failed' }
     return ($output | ConvertFrom-Json)
   }
   $word.Selection.SetRange(6, 6)
   $first = Run-Bridge 'insert' 'paperB' 'Paper B'
+  Write-Host ('Test XML parts: ' + $doc.CustomXMLParts.SelectByNamespace('urn:paperleaf:citations:v1').Count)
   $word.Selection.SetRange(0, 0)
   $second = Run-Bridge 'insert' 'paperA' 'Paper A'
   $refs = @($doc.ContentControls | Where-Object { $_.Tag -like 'paperleaf-ref:*' } | Sort-Object { $_.Range.Start })
@@ -29,13 +30,23 @@ try {
   if ($repeat.references -ne 2) { throw 'Duplicate bibliography entry' }
   $dir = Join-Path $PSScriptRoot '../../.test-data/word-smoke'
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
-  $file = (Join-Path (Resolve-Path $dir) 'citations.docx')
-  $doc.SaveAs2($file, 16)
+  $file = (Join-Path (Resolve-Path $dir) ('citations-' + [guid]::NewGuid().ToString('N') + '.docx'))
+  [object]$saveTarget = [string]$file
+  [object]$format = 16
+  Write-Host 'Saving isolated document'
+  $doc.SaveAs([ref]$saveTarget, [ref]$format)
   $doc.Close(0); $doc = $null
   $doc = $word.Documents.Open($file)
   if (@($doc.ContentControls | Where-Object { $_.Tag -like 'paperleaf-ref:*' }).Count -ne 3) { throw 'Citations did not survive reopen' }
   $last = Run-Bridge 'update' 'paperA' 'Paper A'
   if ($last.references -ne 2) { throw 'Reopened bibliography update failed' }
+  $refs = @($doc.ContentControls | Where-Object { $_.Tag -eq 'paperleaf-ref:paperA' })
+  $refs[0].Delete($true)
+  $settings.markerTemplate = '({{number}})'
+  $last = Run-Bridge 'update' 'paperB' 'Paper B'
+  if ($last.references -ne 1) { throw 'Deleted citation remained in bibliography' }
+  $refs = @($doc.ContentControls | Where-Object { $_.Tag -like 'paperleaf-ref:*' })
+  foreach ($control in $refs) { if ($control.Range.Text -ne '(1)') { throw 'Custom marker or renumber failed' } }
   Write-Output 'PASS: isolated Word insert, source-order numbering, duplicate citations, bibliography and reopen.'
 } finally {
   if ($doc) { $doc.Close(0) }

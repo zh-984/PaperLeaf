@@ -6,6 +6,16 @@ export const defaultCitationSettings: CitationSettings = {
     '[{{number}}] {{authors}}. {{title}}[{{type}}]. {{journal}}, {{year}}, {{volume}}({{issue}}): {{pages}}. {{doi}}',
 };
 
+export function formatAuthors(authors: string) {
+  const names = authors
+    .split(/[;；]/)
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (names.length <= 3) return authors.trim();
+  const chinese = /[\u3400-\u9fff]/u.test(names[0]);
+  return `${names.slice(0, 3).join('; ')}${chinese ? '，等' : ', et al.'}`;
+}
+
 export function formatCitation(template: string, reference: ReferenceData, number: number) {
   const labels = {
     journal: 'J',
@@ -17,6 +27,7 @@ export function formatCitation(template: string, reference: ReferenceData, numbe
   };
   const fields: Record<string, string> = {
     ...reference,
+    authors: formatAuthors(reference.authors),
     type: labels[reference.type],
     number: String(number),
   };

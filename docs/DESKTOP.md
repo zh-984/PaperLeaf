@@ -4,7 +4,7 @@
 
 ## 安装与打开
 
-1. 从 [GitHub Releases](https://github.com/zh-984/PaperLeaf/releases/latest) 下载 `Paperleaf-Setup-0.8.3-x64.exe`，然后双击运行。
+1. 从 [GitHub Releases](https://github.com/zh-984/PaperLeaf/releases/latest) 下载 `Paperleaf-Setup-0.8.4-x64.exe`，然后双击运行。
 2. 按向导安装到当前用户目录。默认不需要管理员权限。
 3. 双击桌面的 **知页 Paperleaf**，或从开始菜单打开。
 
@@ -45,7 +45,7 @@ Web 版项目根目录的 `data/` 与桌面版数据目录相互独立，原始 
 
 左侧 + 新建并命名书架；每组可独立折叠，文献菜单可移动。删除书架不会删除文献。书架、折叠状态和阅读偏好保存在本地 SQLite，更新前会自动备份已有资料库。
 
-“文献引用”页可录入书目信息并预览自定义模板；AI 识别需手动触发，结果需要逐项核对后保存。Word 插入引用、编号重排和文末参考文献目前仍在开发，尚不可用，详见 [Word 联动方案](WORD-INTEGRATION-PLAN.md)。
+“文献引用”页可录入书目信息并预览自定义模板；AI 识别需手动触发，结果需要逐项核对后保存。打开 Word 文档并放好正文光标，可从知页插入引用；更改后点击更新按钮重排编号和文末参考文献，最后在 Word 保存。Word 功能区独立插件入口仍未完成，详见 [Word 联动方案](WORD-INTEGRATION-PLAN.md)。
 
 ## 开发与重建
 

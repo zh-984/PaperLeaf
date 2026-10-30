@@ -4,5 +4,6 @@ contextBridge.exposeInMainWorld(
   'paperleafDesktop',
   Object.freeze({
     action: (name) => ipcRenderer.invoke('paperleaf:desktop-action', name),
+    word: (input) => ipcRenderer.invoke('paperleaf:word', input),
   }),
 );

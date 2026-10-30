@@ -19,6 +19,15 @@ test('reference data, editable templates and manual AI suggestions are safe and 
   expect(response.ok()).toBe(true);
   const paper = await response.json();
   try {
+    await page.addInitScript(() => {
+      window.paperleafDesktop = {
+        action: async () => {},
+        word: async (input) => {
+          localStorage.setItem('word-test-input', JSON.stringify(input));
+          return { citations: 1, references: 1 };
+        },
+      };
+    });
     await page.goto(`${base}/?paper=${paper.id}`);
     await page.getByRole('tab', { name: '文献引用' }).click();
     await expect(page.getByLabel('文献标题')).toHaveValue('Reference Demo');
@@ -44,6 +53,12 @@ test('reference data, editable templates and manual AI suggestions are safe and 
     expect(
       (await (await request.get(`${base}/api/papers/${paper.id}/reference`)).json()).year,
     ).toBe('2025');
+    await page.getByRole('button', { name: '插入到 Word', exact: true }).click();
+    await expect(page.getByRole('status')).toContainText('Word 已更新');
+    const sent = await page.evaluate(() => JSON.parse(localStorage.getItem('word-test-input')!));
+    expect(sent.action).toBe('insert');
+    expect(sent.reference.paperId).toBe(paper.id);
+    expect(sent.settings.markerTemplate).toBe('({{number}})');
   } finally {
     await request.delete(`${base}/api/papers/${paper.id}`);
   }

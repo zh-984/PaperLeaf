@@ -182,7 +182,14 @@ await writeFile(
   path.join(assets, 'icon.ico'),
   Buffer.concat([header, ...entries, ...images.map((image) => image.data)]),
 );
-for (const file of ['main.cjs', 'preload.cjs', 'server-bootstrap.cjs', 'data.cjs', 'loading.html'])
+for (const file of [
+  'main.cjs',
+  'preload.cjs',
+  'server-bootstrap.cjs',
+  'data.cjs',
+  'word.cjs',
+  'loading.html',
+])
   await copyFile(path.join('desktop', file), path.join(appRoot, file));
 await cp(assets, path.join(appRoot, 'assets'), { recursive: true });
 const pkg = JSON.parse(await readFile('package.json', 'utf8'));

@@ -154,6 +154,19 @@ async function desktopAction(action, local) {
 function installMenu(local) {
   Menu.setApplicationMenu(null);
   window.setMenuBarVisibility(false);
+  ipcMain.handle('paperleaf:word', async (event, input) => {
+    if (
+      event.sender !== window.webContents ||
+      event.senderFrame !== window.webContents.mainFrame ||
+      !baseUrl ||
+      new URL(event.senderFrame.url).origin !== baseUrl
+    )
+      throw new Error('拒绝非应用页面的 Word 操作');
+    const script = app.isPackaged
+      ? path.join(process.resourcesPath, 'desktop/word-bridge.ps1')
+      : path.join(__dirname, 'word-bridge.ps1');
+    return require('./word.cjs').runWord(input, script);
+  });
   ipcMain.handle('paperleaf:desktop-action', async (event, action) => {
     if (
       event.sender !== window.webContents ||

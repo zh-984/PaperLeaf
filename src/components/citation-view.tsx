@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { defaultCitationSettings, formatCitation } from '@/lib/citation';
+import { defaultCitationSettings, formatAuthors, formatCitation } from '@/lib/citation';
 import type { CitationSettings, PaperDetail, ReferenceData } from '@/lib/types';
 import { Button } from './ui/button';
 
@@ -24,7 +24,9 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [aiSuggested, setAiSuggested] = useState(false);
+  const [wordAvailable, setWordAvailable] = useState(false);
   useEffect(() => {
+    setWordAvailable(typeof window.paperleafDesktop?.word === 'function');
     let active = true;
     Promise.all([
       api<ReferenceData>(`/api/papers/${paper.id}/reference`),
@@ -43,6 +45,30 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
       active = false;
     };
   }, [paper.id]);
+  async function wordAction(action: 'insert' | 'update') {
+    if (!reference || !window.paperleafDesktop?.word) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      await api(`/api/papers/${paper.id}/reference`, {
+        method: 'PATCH',
+        body: JSON.stringify({ reference, settings }),
+      });
+      const result = await window.paperleafDesktop.word({
+        action,
+        reference: { ...reference, paperId: paper.id, authors: formatAuthors(reference.authors) },
+        settings,
+      });
+      setMessage(
+        `Word 已更新：${result.citations} 处引用，${result.references} 篇参考文献。请检查并保存 Word 文档。`,
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Word 操作失败');
+    } finally {
+      setBusy(false);
+    }
+  }
   async function save() {
     if (!reference) return;
     setBusy(true);
@@ -94,9 +120,23 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
         <h1>文献引用</h1>
         <p>填写并核对文献资料。作者请按原文顺序填写。</p>
         <p className="citation-hint">
-          Word 插入、自动重排和文末参考文献功能仍在开发中；目前可以保存书目信息并预览格式。
+          在 Windows 桌面 Word
+          打开目标文档并放置光标，再点击插入。引用按正文位置编号，重复引用共用编号；更改正文或格式后点击更新。暂不支持修订模式、受保护文档、脚注和页眉中的引用。
         </p>
         <div className="citation-actions">
+          <Button
+            disabled={busy || !reference || !wordAvailable}
+            onClick={() => void wordAction('insert')}
+          >
+            插入到 Word
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={busy || !reference || !wordAvailable}
+            onClick={() => void wordAction('update')}
+          >
+            更新 Word 引用与参考文献
+          </Button>
           <Button
             type="button"
             variant="secondary"

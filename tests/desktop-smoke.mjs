@@ -69,6 +69,17 @@ try {
     ),
   ).toBe(false);
   expect(await window.evaluate(() => typeof window.require)).toBe('undefined');
+  expect(await window.evaluate(() => typeof window.paperleafDesktop.word)).toBe('function');
+  expect(
+    await window.evaluate(async () => {
+      try {
+        await window.paperleafDesktop.word({ action: 'invalid' });
+        return false;
+      } catch {
+        return true;
+      }
+    }),
+  ).toBe(true);
   const uploadResponse = window.waitForResponse(
     (response) => response.url().endsWith('/api/papers') && response.request().method() === 'POST',
   );

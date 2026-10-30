@@ -13,6 +13,7 @@ module.exports = {
     'main.cjs',
     'preload.cjs',
     'data.cjs',
+    'word.cjs',
     'loading.html',
     'assets/**/*',
     'package.json',
@@ -31,6 +32,10 @@ module.exports = {
     await cp(source, destination, { recursive: true, dereference: true });
   },
   extraResources: [
+    {
+      from: require('node:path').join(__dirname, 'word-bridge.ps1'),
+      to: 'desktop/word-bridge.ps1',
+    },
     {
       from: require('node:path').join(__dirname, 'server-bootstrap.cjs'),
       to: 'desktop/server-bootstrap.cjs',

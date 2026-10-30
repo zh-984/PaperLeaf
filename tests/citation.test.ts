@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { GET, PATCH } from '@/app/api/[...path]/route';
 import { POST as recognize } from '@/app/api/ai/reference/[id]/route';
 import { db } from '@/server/db';
-import { defaultCitationSettings, formatCitation } from '@/lib/citation';
+import { defaultCitationSettings, formatAuthors, formatCitation } from '@/lib/citation';
 import type { ReferenceData } from '@/lib/types';
 
 vi.mock('next/server', () => ({ after: () => undefined }));
@@ -24,6 +24,11 @@ afterAll(async () => {
 });
 
 describe('citation information and formatting', () => {
+  it('shortens four or more authors according to the first author language', () => {
+    expect(formatAuthors('张三；李四；王五；赵六')).toBe('张三; 李四; 王五，等');
+    expect(formatAuthors('Smith; Jones; White; Brown')).toBe('Smith; Jones; White, et al.');
+    expect(formatAuthors('张三；李四；王五')).toBe('张三；李四；王五');
+  });
   it('formats custom labels and omits empty brackets', () => {
     expect(formatCitation('({{number}})', reference, 2)).toBe('(2)');
     expect(formatCitation(defaultCitationSettings.referenceTemplate, reference, 1)).toContain(
