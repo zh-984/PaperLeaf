@@ -3623,6 +3623,9 @@ textarea::placeholder {
   gap: 16px;
   margin-top: 18px;
 }
+.citation-formats .citation-grid label {
+  grid-column: auto;
+}
 .citation-preview {
   margin-top: 20px;
   background: #f5f7f1;
@@ -3633,6 +3636,26 @@ textarea::placeholder {
 .citation-preview p {
   margin-top: 10px;
   line-height: 1.5;
+}
+.citation-fields {
+  margin-top: 20px;
+  font-size: 14px;
+}
+.citation-fields summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.citation-fields table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+.citation-fields th,
+.citation-fields td {
+  text-align: left;
+  padding: 9px;
+  border-bottom: 1px solid #ddd;
+  overflow-wrap: anywhere;
 }
 @media (max-width: 720px) {
   .citation-document {

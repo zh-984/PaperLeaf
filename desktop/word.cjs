@@ -1,7 +1,7 @@
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 let busy = false;
-function runWord(input, script) {
+function runWord(input, script, testMode = false) {
   if (busy) return Promise.reject(new Error('Word 正在更新，请稍候'));
   if (!input || !['insert', 'update'].includes(input.action))
     return Promise.reject(new Error('无效的 Word 操作'));
@@ -13,6 +13,17 @@ function runWord(input, script) {
     !input.settings.referenceTemplate?.includes('{{title}}')
   )
     return Promise.reject(new Error('引用格式无效'));
+  if (
+    (input.settings.markerSuperscript !== undefined &&
+      typeof input.settings.markerSuperscript !== 'boolean') ||
+    (input.settings.bibliographyIndent !== undefined &&
+      !['none', 'firstLine', 'hanging'].includes(input.settings.bibliographyIndent)) ||
+    (input.settings.indentCharacters !== undefined &&
+      (!Number.isFinite(input.settings.indentCharacters) ||
+        input.settings.indentCharacters < 0 ||
+        input.settings.indentCharacters > 10))
+  )
+    return Promise.reject(new Error('引用显示或缩进设置无效'));
   if (
     input.action === 'insert' &&
     (!input.reference ||
@@ -28,12 +39,27 @@ function runWord(input, script) {
     );
     const child = spawn(
       executable,
-      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script],
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        script,
+        ...(testMode ? ['-TestMode'] : []),
+      ],
       { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] },
     );
     let output = '',
       errors = '';
-    const timer = setTimeout(() => child.kill(), 30000);
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill();
+    }, 30000);
+    child.stdin.on('error', () => {
+      /* close/error handlers report the process failure. */
+    });
     child.stdout.on('data', (chunk) => {
       output += chunk.toString('utf8');
     });
@@ -52,7 +78,9 @@ function runWord(input, script) {
         reject(
           new Error(
             'Word 操作未完成：' +
-              (errors.trim().slice(0, 500) || '请检查 Word 是否有弹窗，然后重试'),
+              (timedOut
+                ? '操作超时，请检查 Word 弹窗及文档内容后再操作'
+                : errors.trim().slice(0, 500) || '请检查 Word 是否有弹窗，然后重试'),
           ),
         );
         return;

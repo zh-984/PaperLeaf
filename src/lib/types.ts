@@ -62,6 +62,9 @@ export interface ReferenceData {
 export interface CitationSettings {
   markerTemplate: string;
   referenceTemplate: string;
+  markerSuperscript: boolean;
+  bibliographyIndent: 'none' | 'firstLine' | 'hanging';
+  indentCharacters: number;
 }
 export interface Bookshelf {
   id: string;

@@ -1,7 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { defaultCitationSettings, formatAuthors, formatCitation } from '@/lib/citation';
+import {
+  citationPlaceholders,
+  defaultCitationSettings,
+  formatAuthors,
+  formatCitation,
+} from '@/lib/citation';
 import type { CitationSettings, PaperDetail, ReferenceData } from '@/lib/types';
 import { Button } from './ui/button';
 
@@ -64,7 +69,11 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
         `Word 已更新：${result.citations} 处引用，${result.references} 篇参考文献。请检查并保存 Word 文档。`,
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Word 操作失败');
+      setError(
+        cause instanceof Error
+          ? cause.message.replace(/^Error invoking remote method 'paperleaf:word': Error: /, '')
+          : 'Word 操作失败',
+      );
     } finally {
       setBusy(false);
     }
@@ -204,8 +213,8 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
             <h2>引用格式</h2>
             <p className="citation-hint">
               使用字段占位符定制格式；标号必须包含 {'{{number}}'}，参考文献必须包含 {'{{title}}'}
-              。支持
-              number、authors、title、type、journal、year、volume、issue、pages、doi、publisher。
+              。直接调整标点、顺序或删除不需要的字段即可。作者以分号分隔，超过三人保留前三人，接“等”或
+              et al.。
             </p>
             <div className="citation-formats">
               <label>
@@ -220,6 +229,23 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
                 />
               </label>
               <label>
+                文中标号显示
+                <select
+                  className="text-input"
+                  disabled={busy}
+                  value={settings.markerSuperscript ? 'superscript' : 'normal'}
+                  onChange={(event) =>
+                    setSettings({
+                      ...settings,
+                      markerSuperscript: event.target.value === 'superscript',
+                    })
+                  }
+                >
+                  <option value="superscript">上标（默认）</option>
+                  <option value="normal">普通文字</option>
+                </select>
+              </label>
+              <label>
                 文末参考文献
                 <textarea
                   className="text-input"
@@ -231,10 +257,80 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
                   }
                 />
               </label>
+              <div className="citation-grid">
+                <label>
+                  文末参考文献缩进
+                  <select
+                    className="text-input"
+                    disabled={busy}
+                    value={settings.bibliographyIndent}
+                    onChange={(event) =>
+                      setSettings({
+                        ...settings,
+                        bibliographyIndent: event.target
+                          .value as CitationSettings['bibliographyIndent'],
+                      })
+                    }
+                  >
+                    <option value="none">无缩进</option>
+                    <option value="firstLine">首行缩进</option>
+                    <option value="hanging">悬挂缩进</option>
+                  </select>
+                </label>
+                <label>
+                  缩进字符数
+                  <input
+                    className="text-input"
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.5}
+                    disabled={busy || settings.bibliographyIndent === 'none'}
+                    value={settings.indentCharacters}
+                    onChange={(event) =>
+                      setSettings({ ...settings, indentCharacters: Number(event.target.value) })
+                    }
+                  />
+                </label>
+              </div>
             </div>
+            <p className="citation-hint">
+              缩进仅应用于文末每条参考文献，不影响“参考文献”标题。保存后点击“更新 Word
+              引用与参考文献”，即可应用到已有引用。
+            </p>
+            <details className="citation-fields">
+              <summary>格式字段对照表（点击展开）</summary>
+              <table>
+                <thead>
+                  <tr>
+                    <th>占位符</th>
+                    <th>对应内容</th>
+                    <th>说明 / 示例</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {citationPlaceholders.map(([name, label, example]) => (
+                    <tr key={name}>
+                      <td>
+                        <code>{`{{${name}}}`}</code>
+                      </td>
+                      <td>{label}</td>
+                      <td>{example}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
             <div className="citation-preview">
               <strong>预览</strong>
-              <p>文中：{formatCitation(settings.markerTemplate, reference, 1)}</p>
+              <p>
+                文中：示例正文
+                {settings.markerSuperscript ? (
+                  <sup>{formatCitation(settings.markerTemplate, reference, 1)}</sup>
+                ) : (
+                  formatCitation(settings.markerTemplate, reference, 1)
+                )}
+              </p>
               <p>文末：{formatCitation(settings.referenceTemplate, reference, 1)}</p>
             </div>
           </>

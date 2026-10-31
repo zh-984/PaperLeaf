@@ -4,6 +4,7 @@ import { POST as recognize } from '@/app/api/ai/reference/[id]/route';
 import { db } from '@/server/db';
 import { defaultCitationSettings, formatAuthors, formatCitation } from '@/lib/citation';
 import type { ReferenceData } from '@/lib/types';
+import { citationSettingsSchema } from '@/lib/validation';
 
 vi.mock('next/server', () => ({ after: () => undefined }));
 const reference: ReferenceData = {
@@ -24,6 +25,23 @@ afterAll(async () => {
 });
 
 describe('citation information and formatting', () => {
+  it('defaults older styles to superscript and validates character-unit indentation', () => {
+    const oldStyle = { markerTemplate: '[{{number}}]', referenceTemplate: '{{title}}.' };
+    expect(citationSettingsSchema.parse(oldStyle)).toMatchObject({
+      markerSuperscript: true,
+      bibliographyIndent: 'none',
+      indentCharacters: 2,
+    });
+    expect(citationSettingsSchema.safeParse({ ...oldStyle, indentCharacters: -1 }).success).toBe(
+      false,
+    );
+    expect(citationSettingsSchema.safeParse({ ...oldStyle, indentCharacters: 11 }).success).toBe(
+      false,
+    );
+    expect(
+      citationSettingsSchema.safeParse({ ...oldStyle, bibliographyIndent: 'unknown' }).success,
+    ).toBe(false);
+  });
   it('shortens four or more authors according to the first author language', () => {
     expect(formatAuthors('张三；李四；王五；赵六')).toBe('张三; 李四; 王五，等');
     expect(formatAuthors('Smith; Jones; White; Brown')).toBe('Smith; Jones; White, et al.');
@@ -58,11 +76,27 @@ describe('citation information and formatting', () => {
       const valid = await PATCH(
         new Request(endpoint, {
           method: 'PATCH',
-          body: JSON.stringify({ reference, settings: defaultCitationSettings }),
+          body: JSON.stringify({
+            reference,
+            settings: {
+              ...defaultCitationSettings,
+              bibliographyIndent: 'hanging',
+              indentCharacters: 1.5,
+            },
+          }),
         }),
         context('papers', paper.id, 'reference'),
       );
       expect(valid.status).toBe(200);
+      const style = await GET(
+        new Request('http://localhost/api/citation-settings'),
+        context('citation-settings'),
+      );
+      expect(await style.json()).toMatchObject({
+        markerSuperscript: true,
+        bibliographyIndent: 'hanging',
+        indentCharacters: 1.5,
+      });
       const invalid = await PATCH(
         new Request(endpoint, {
           method: 'PATCH',

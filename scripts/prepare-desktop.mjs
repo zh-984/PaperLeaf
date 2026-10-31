@@ -19,16 +19,21 @@ const require = createRequire(import.meta.url);
 const output = path.resolve(root, '.desktop-build');
 const dist = '.next-desktop';
 if (!process.argv.includes('--skip-build')) {
-  const result = spawnSync(process.execPath, ['node_modules/next/dist/bin/next', 'build'], {
-    stdio: 'inherit',
-    windowsHide: true,
-    env: {
-      ...process.env,
-      PAPERLEAF_DESKTOP_BUILD: '1',
-      NEXT_DIST_DIR: dist,
-      NEXT_TELEMETRY_DISABLED: '1',
+  // Webpack avoids intermittent Turbopack CSS worker exits on Windows installer builds.
+  const result = spawnSync(
+    process.execPath,
+    ['node_modules/next/dist/bin/next', 'build', '--webpack'],
+    {
+      stdio: 'inherit',
+      windowsHide: true,
+      env: {
+        ...process.env,
+        PAPERLEAF_DESKTOP_BUILD: '1',
+        NEXT_DIST_DIR: dist,
+        NEXT_TELEMETRY_DISABLED: '1',
+      },
     },
-  });
+  );
   if (result.status !== 0) process.exit(result.status || 1);
 }
 await access(path.join(dist, 'standalone/server.js'));
@@ -119,9 +124,13 @@ const pdfRequire = await copyPackage('pdfjs-dist', require);
 await copyPackage('@napi-rs/canvas', pdfRequire);
 // Turbopack relocates external ESM imports into a hashed package directory. Preserve
 // PDF.js's relative fake-worker imports there as well as in canonical node_modules.
-for (const entry of await readdir(path.join(serverRoot, dist, 'node_modules'), {
+const relocatedModules = await readdir(path.join(serverRoot, dist, 'node_modules'), {
   withFileTypes: true,
-})) {
+}).catch((error) => {
+  if (error.code === 'ENOENT') return []; // Webpack uses canonical node_modules only.
+  throw error;
+});
+for (const entry of relocatedModules) {
   if (entry.isDirectory() && entry.name.startsWith('pdfjs-dist-')) {
     await cp(
       path.dirname(require.resolve('pdfjs-dist/package.json')),

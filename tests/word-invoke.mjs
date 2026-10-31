@@ -9,7 +9,13 @@ process.stdin.on('data', (chunk) => {
 process.stdin.on('end', async () => {
   try {
     console.log(
-      JSON.stringify(await runWord(JSON.parse(data), path.resolve('desktop/word-bridge.ps1'))),
+      JSON.stringify(
+        await runWord(
+          JSON.parse(data),
+          path.resolve('desktop/word-bridge.ps1'),
+          process.argv.includes('--isolated'),
+        ),
+      ),
     );
   } catch (error) {
     console.error(error.message);

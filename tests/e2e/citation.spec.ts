@@ -32,7 +32,12 @@ test('reference data, editable templates and manual AI suggestions are safe and 
     await page.getByRole('tab', { name: '文献引用' }).click();
     await expect(page.getByLabel('文献标题')).toHaveValue('Reference Demo');
     await page.getByLabel('作者', { exact: true }).fill('Manual Author');
-    await page.getByLabel('文中标号').fill('({{number}})');
+    await page.getByLabel('文中标号', { exact: true }).fill('({{number}})');
+    await page.getByLabel('文末参考文献缩进').selectOption('hanging');
+    await page.getByLabel('缩进字符数').fill('1.5');
+    await expect(page.locator('.citation-preview sup')).toHaveText('(1)');
+    await page.getByText('格式字段对照表（点击展开）').click();
+    await expect(page.getByRole('cell', { name: '{{authors}}', exact: true })).toBeVisible();
     if (process.env.PAPERLEAF_CAPTURE)
       await page.screenshot({ path: 'test-results/citation-view.png' });
     await page.getByRole('button', { name: '保存引用信息' }).click();
@@ -40,7 +45,9 @@ test('reference data, editable templates and manual AI suggestions are safe and 
     await page.reload();
     await page.getByRole('tab', { name: '文献引用' }).click();
     await expect(page.getByLabel('作者', { exact: true })).toHaveValue('Manual Author');
-    await expect(page.getByLabel('文中标号')).toHaveValue('({{number}})');
+    await expect(page.getByLabel('文中标号', { exact: true })).toHaveValue('({{number}})');
+    await expect(page.getByLabel('文末参考文献缩进')).toHaveValue('hanging');
+    await expect(page.getByLabel('缩进字符数')).toHaveValue('1.5');
     await page.getByRole('button', { name: 'AI 识别书目信息' }).click();
     await expect(page.getByRole('status')).toContainText('请逐项核对');
     await expect(page.getByLabel('作者', { exact: true })).toHaveValue('Manual Author');
@@ -59,6 +66,9 @@ test('reference data, editable templates and manual AI suggestions are safe and 
     expect(sent.action).toBe('insert');
     expect(sent.reference.paperId).toBe(paper.id);
     expect(sent.settings.markerTemplate).toBe('({{number}})');
+    expect(sent.settings.markerSuperscript).toBe(true);
+    expect(sent.settings.bibliographyIndent).toBe('hanging');
+    expect(sent.settings.indentCharacters).toBe(1.5);
   } finally {
     await request.delete(`${base}/api/papers/${paper.id}`);
   }

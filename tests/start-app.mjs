@@ -45,6 +45,14 @@ if (
     readFileSync('prisma/migrations/20261029170000_reference_citations/migration.sql', 'utf8'),
   );
 }
+if (
+  !database
+    .prepare('PRAGMA table_info(CitationSettings)')
+    .all()
+    .some((column) => column.name === 'markerSuperscript')
+) {
+  database.exec(readFileSync('prisma/migrations/20261031090000_word_format/migration.sql', 'utf8'));
+}
 database.close();
 const tsconfig = `.test-data/tsconfig-${mode}.json`;
 writeFileSync(

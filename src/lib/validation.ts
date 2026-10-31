@@ -125,6 +125,9 @@ const validTemplate = (value: string) => {
   );
 };
 export const citationSettingsSchema = z.object({
+  markerSuperscript: z.boolean().default(true),
+  bibliographyIndent: z.enum(['none', 'firstLine', 'hanging']).default('none'),
+  indentCharacters: z.number().min(0).max(10).default(2),
   markerTemplate: z
     .string()
     .trim()

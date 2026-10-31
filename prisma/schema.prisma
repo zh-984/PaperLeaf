@@ -48,6 +48,9 @@ model Reference {
 }
 
 model CitationSettings {
+  markerSuperscript Boolean @default(true)
+  bibliographyIndent String @default("none")
+  indentCharacters Float @default(2)
   id                String @id @default("local")
   markerTemplate    String @default("[{{number}}]")
   referenceTemplate String @default("[{{number}}] {{authors}}. {{title}}[{{type}}]. {{journal}}, {{year}}, {{volume}}({{issue}}): {{pages}}. {{doi}}")

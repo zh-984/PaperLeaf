@@ -23,6 +23,7 @@ import { supportsVisionModel } from '@/lib/ai-models';
 import { cancelReport, recoverInterrupted, startReport } from '@/server/ai/report';
 import { bookshelfSchema, bookshelfPatchSchema, preferencesSchema } from '@/lib/validation';
 import { getPreferences } from '@/server/preferences';
+import { defaultCitationSettings } from '@/lib/citation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,13 +51,7 @@ async function handler(request: Request, context: Context): Promise<Response> {
     if (resource === 'citation-settings' && path.length === 1) {
       if (method === 'GET') {
         const settings = await db.citationSettings.findUnique({ where: { id: 'local' } });
-        return Response.json(
-          settings || {
-            markerTemplate: '[{{number}}]',
-            referenceTemplate:
-              '[{{number}}] {{authors}}. {{title}}[{{type}}]. {{journal}}, {{year}}, {{volume}}({{issue}}): {{pages}}. {{doi}}',
-          },
-        );
+        return Response.json(settings || defaultCitationSettings);
       }
       if (method === 'PATCH') {
         const data = citationSettingsSchema.parse(await jsonBody(request));
