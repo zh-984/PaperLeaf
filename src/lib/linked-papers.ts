@@ -1,4 +1,17 @@
 import type { Bookshelf, Paper } from './types';
+import { formatScientificText, scientificRuns } from './citation';
+
+function normalizeMention(value: string) {
+  return scientificRuns(formatScientificText(value))
+    .map((run) => run.text)
+    .join('')
+    .normalize('NFKC')
+    .toLocaleLowerCase()
+    .replace(/[“”‘’"'「」『』《》]/g, '')
+    .replace(/[‐‑–—]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 // Only titles explicitly written in the question may grant access to other papers.
 export function matchLinkedPapers(
@@ -7,17 +20,18 @@ export function matchLinkedPapers(
   currentId: string,
   shelves: Bookshelf[] = [],
 ) {
-  const text = question.normalize('NFKC').toLocaleLowerCase();
+  const text = normalizeMention(question);
   const shelfMentions = [
     ...shelves.map(({ id, name }) => ({ id, name })),
     { id: null, name: '默认书架' },
   ]
     .flatMap(({ id, name }) => {
-      const normalized = name.trim().normalize('NFKC').toLocaleLowerCase();
+      const normalized = normalizeMention(name);
       if (!normalized) return [];
       const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const suffix = normalized.endsWith('书架') ? '' : '(?:书架|书柜|的|中|内|里)';
-      return [...text.matchAll(new RegExp(`${escaped}${suffix}`, 'g'))].map((match) => ({
+      const suffix = normalized.endsWith('书架') ? '' : '\\s*(?:书架|书柜|的|中|内|里)';
+      const boundary = /^[a-z0-9]/.test(normalized) ? '(?<![a-z0-9])' : '';
+      return [...text.matchAll(new RegExp(`${boundary}${escaped}${suffix}`, 'g'))].map((match) => ({
         id,
         start: match.index,
         end: match.index + match[0].length,
@@ -25,7 +39,7 @@ export function matchLinkedPapers(
     })
     .sort((a, b) => b.end - a.end || a.start - b.start);
   const occurrences = papers.flatMap((paper) => {
-    const title = paper.title.trim().normalize('NFKC').toLocaleLowerCase();
+    const title = normalizeMention(paper.title);
     if (paper.id === currentId || !title) return [];
     const matches: { paper: Paper; start: number; end: number; title: string }[] = [];
     let start = text.indexOf(title);
@@ -53,7 +67,10 @@ export function matchLinkedPapers(
   let shelfMismatch = false;
   for (const item of selected) {
     const mention = shelfMentions.find(
-      (shelf) => shelf.end <= item.start && item.start - shelf.end < 100,
+      (shelf) =>
+        shelf.end <= item.start &&
+        item.start - shelf.end < 100 &&
+        !/[。；;!?！？]/.test(text.slice(shelf.end, item.start)),
     );
     if (mention && (item.paper.shelfId || null) !== mention.id) {
       continue;

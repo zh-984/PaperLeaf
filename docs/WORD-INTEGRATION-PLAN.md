@@ -23,3 +23,5 @@ Windows 桌面版可从“文献引用”页插入到当前打开的 Microsoft W
 隔离测试命令：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File experiments/word-prototype/word-bridge-smoke.ps1`。覆盖 .doc、.docx、旧内容控件引用三种文档：前插重编号、重复引用去重、单个文末区块、保存重开、书目信息更新、上标及普通文字切换、三种缩进、删除引用后的重排。测试在独立 Word 实例及 .test-data/word-smoke 临时文件运行，不修改打开的用户文档。尚未承诺完整 CSL 标准、多人协作或所有 Office 版本兼容性。
 
 0.8.7：标题字段旁支持选中文字后设置上标/下标，输入中用 ^{文字} / _{文字} 保存，预览使用真实 HTML 上下标。Word 使用普通字符和 Font.Superscript / Font.Subscript，英文字体及标点为 Times New Roman，中文为宋体。悬挂缩进按首行零偏移、续行指定字符宽度执行。
+
+0.8.8：标题在同一个富文本编辑框内直接设置上标/下标，再次点击同一按钮恢复普通文字；去掉独立标题预览。内部保存格式标记，Word 仍使用真正字符格式。

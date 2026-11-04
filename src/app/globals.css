@@ -2764,10 +2764,10 @@ svg {
   padding-right: 3px;
 }
 .project-shelf .shelf-item {
-  margin-bottom: 6px;
+  margin-bottom: 3px;
 }
 .project-shelf .paper-select {
-  padding: 10px 8px;
+  padding: 7px 8px;
 }
 .project-shelf .paper-mini strong {
   font-size: 13px;
@@ -3651,6 +3651,19 @@ textarea::placeholder {
 }
 .citation-formats .citation-grid label {
   grid-column: auto;
+}
+.citation-formats > .citation-grid {
+  margin-top: 0;
+}
+.citation-title-editor {
+  min-height: 44px;
+  height: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chat-question > p,
+.chat-question blockquote {
+  line-height: 1.4;
 }
 .citation-preview {
   margin-top: 20px;

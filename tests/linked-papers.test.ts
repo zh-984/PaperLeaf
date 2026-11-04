@@ -5,6 +5,25 @@ import type { Bookshelf, Paper } from '@/lib/types';
 const paper = (id: string, title: string) => ({ id, title }) as Paper;
 
 describe('explicit bookshelf title matching', () => {
+  it('accepts quoted shelf names and titles, full-width punctuation and scientific indices', () => {
+    const shelves = [
+      { id: 's1', name: '111' },
+      { id: 's2', name: '11' },
+    ] as Bookshelf[];
+    const papers = [{ ...paper('one', 'An Efficient BiVO_{4} Photoanode'), shelfId: 's1' }];
+    for (const question of [
+      '请你阅读“111”书架的“An Efficient BiVO4 Photoanode”。',
+      '请你阅读111书架的An Efficient BiVO4 Photoanode。',
+      '请你阅读“111书架的An Efficient BiVO4 Photoanode”。',
+      '请阅读「１１１」书架上的《An Efficient BiVO₄ Photoanode》',
+    ]) {
+      expect(matchLinkedPapers(question, papers, 'current', shelves)).toMatchObject({
+        ids: ['one'],
+        shelfMismatch: false,
+        mentionedShelfIds: ['s1'],
+      });
+    }
+  });
   it('matches complete titles case-insensitively, excludes the current paper and ignores unknown titles', () => {
     const papers = [
       paper('current', 'Current'),

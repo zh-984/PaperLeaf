@@ -1,6 +1,7 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScientificText } from './scientific-text';
+import { TitleEditor } from './title-editor';
 import { api } from '@/lib/api';
 import {
   citationPlaceholders,
@@ -8,7 +9,6 @@ import {
   formatAuthors,
   formatCitation,
   formatScientificText,
-  recoverScientificText,
 } from '@/lib/citation';
 import type { CitationSettings, PaperDetail, ReferenceData } from '@/lib/types';
 import { Button } from './ui/button';
@@ -26,26 +26,6 @@ const fields: { name: keyof Omit<ReferenceData, 'type'>; label: string; placehol
 ];
 
 export function CitationView({ paper }: { paper: PaperDetail }) {
-  const titleInput = useRef<HTMLInputElement>(null);
-  function markTitle(script: '_' | '^') {
-    const input = titleInput.current;
-    if (!input || !reference) return;
-    const start = input.selectionStart ?? 0;
-    const end = input.selectionEnd ?? start;
-    if (start === end) {
-      setMessage('请先选中文献标题中要设置角标的文字');
-      return;
-    }
-    const title =
-      reference.title.slice(0, start) +
-      script +
-      '{' +
-      reference.title.slice(start, end) +
-      '}' +
-      reference.title.slice(end);
-    setReference({ ...reference, title });
-    input.focus();
-  }
   const [reference, setReference] = useState<ReferenceData | null>(null);
   const [settings, setSettings] = useState<CitationSettings>(defaultCitationSettings);
   const [busy, setBusy] = useState(false);
@@ -88,7 +68,7 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
         reference: {
           ...reference,
           paperId: paper.id,
-          title: recoverScientificText(reference.title, paper.fileName),
+          title: formatScientificText(reference.title),
           journal: formatScientificText(reference.journal),
           authors: formatAuthors(reference.authors),
         },
@@ -227,43 +207,27 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
               </label>
               {fields.map(({ name, label, placeholder }) => (
                 <div key={name}>
-                  <label htmlFor={`reference-${name}`}>{label}</label>
-                  {name === 'title' && (
-                    <span className="citation-script-actions">
-                      <button
-                        type="button"
+                  {name === 'title' ? (
+                    <TitleEditor
+                      value={reference.title}
+                      disabled={busy}
+                      onChange={(title) => setReference({ ...reference, title })}
+                    />
+                  ) : (
+                    <>
+                      <label htmlFor={`reference-${name}`}>{label}</label>
+                      <input
+                        id={`reference-${name}`}
+                        className="text-input"
                         disabled={busy}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => markTitle('^')}
-                      >
-                        上标 x²
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => markTitle('_')}
-                      >
-                        下标 x₂
-                      </button>
-                    </span>
-                  )}
-                  <input
-                    id={`reference-${name}`}
-                    ref={name === 'title' ? titleInput : undefined}
-                    className="text-input"
-                    disabled={busy}
-                    value={reference[name]}
-                    placeholder={placeholder}
-                    maxLength={500}
-                    onChange={(event) => setReference({ ...reference, [name]: event.target.value })}
-                  />
-                  {name === 'title' && (
-                    <p className="citation-title-preview">
-                      <ScientificText
-                        text={recoverScientificText(reference.title, paper.fileName)}
+                        value={reference[name]}
+                        placeholder={placeholder}
+                        maxLength={500}
+                        onChange={(event) =>
+                          setReference({ ...reference, [name]: event.target.value })
+                        }
                       />
-                    </p>
+                    </>
                   )}
                 </div>
               ))}
@@ -393,7 +357,7 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
                 <ScientificText
                   text={formatCitation(
                     settings.referenceTemplate,
-                    { ...reference, title: recoverScientificText(reference.title, paper.fileName) },
+                    { ...reference, title: formatScientificText(reference.title) },
                     1,
                   )}
                 />

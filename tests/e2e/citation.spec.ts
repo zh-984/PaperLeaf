@@ -30,14 +30,29 @@ test('reference data, editable templates and manual AI suggestions are safe and 
     });
     await page.goto(`${base}/?paper=${paper.id}`);
     await page.getByRole('tab', { name: '文献引用' }).click();
-    await expect(page.getByLabel('文献标题')).toHaveValue('Reference Demo');
-    await page.getByLabel('文献标题').fill('BiVO4 test');
-    await page
-      .getByLabel('文献标题')
-      .evaluate((element) => (element as HTMLInputElement).setSelectionRange(4, 5));
+    const title = page.getByRole('textbox', { name: '文献标题' });
+    await expect(title).toHaveText('Reference Demo');
+    await title.fill('BiVO4 test');
+    await title.evaluate((element) => {
+      const node = element.firstChild!;
+      const range = document.createRange();
+      range.setStart(node, 4);
+      range.setEnd(node, 5);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
     await page.getByRole('button', { name: '下标 x₂' }).click();
-    await expect(page.getByLabel('文献标题')).toHaveValue('BiVO_{4} test');
-    await expect(page.locator('.citation-title-preview sub')).toHaveText('4');
+    await expect(title.locator('sub')).toHaveText('4');
+    await page.getByRole('button', { name: '下标 x₂' }).click();
+    await expect(title.locator('sub')).toHaveCount(0);
+    await page.getByRole('button', { name: '上标 x²' }).click();
+    await expect(title.locator('sup')).toHaveText('4');
+    await page.getByRole('button', { name: '上标 x²' }).click();
+    await expect(title.locator('sup')).toHaveCount(0);
+    await page.getByRole('button', { name: '下标 x₂' }).click();
+    await expect(title.locator('sub')).toHaveText('4');
+    await expect(page.locator('.citation-title-preview')).toHaveCount(0);
     await page.getByLabel('作者', { exact: true }).fill('Manual Author');
     await page.getByLabel('文中标号', { exact: true }).fill('({{number}})');
     await page.getByLabel('文末参考文献缩进').selectOption('hanging');
@@ -51,6 +66,7 @@ test('reference data, editable templates and manual AI suggestions are safe and 
     await expect(page.getByRole('status')).toContainText('已保存');
     await page.reload();
     await page.getByRole('tab', { name: '文献引用' }).click();
+    await expect(title.locator('sub')).toHaveText('4');
     await expect(page.getByLabel('作者', { exact: true })).toHaveValue('Manual Author');
     await expect(page.getByLabel('文中标号', { exact: true })).toHaveValue('({{number}})');
     await expect(page.getByLabel('文末参考文献缩进')).toHaveValue('hanging');
