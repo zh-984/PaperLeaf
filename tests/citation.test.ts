@@ -2,7 +2,13 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { GET, PATCH } from '@/app/api/[...path]/route';
 import { POST as recognize } from '@/app/api/ai/reference/[id]/route';
 import { db } from '@/server/db';
-import { defaultCitationSettings, formatAuthors, formatCitation } from '@/lib/citation';
+import {
+  defaultCitationSettings,
+  formatAuthors,
+  formatCitation,
+  formatScientificText,
+  recoverScientificText,
+} from '@/lib/citation';
 import type { ReferenceData } from '@/lib/types';
 import { citationSettingsSchema } from '@/lib/validation';
 
@@ -43,14 +49,26 @@ describe('citation information and formatting', () => {
     ).toBe(false);
   });
   it('shortens four or more authors according to the first author language', () => {
-    expect(formatAuthors('张三；李四；王五；赵六')).toBe('张三; 李四; 王五，等');
-    expect(formatAuthors('Smith; Jones; White; Brown')).toBe('Smith; Jones; White, et al.');
-    expect(formatAuthors('张三；李四；王五')).toBe('张三；李四；王五');
+    expect(formatAuthors('张三；李四；王五；赵六')).toBe('张三, 李四, 王五, 等');
+    expect(formatAuthors('Smith; Jones; White; Brown')).toBe('Smith, Jones, White, et al.');
+    expect(formatAuthors('张三；李四；王五')).toBe('张三, 李四, 王五');
+    expect(formatAuthors('Smith, John; Jones, Anne')).toBe('Smith, John, Jones, Anne');
+  });
+  it('renders common scientific subscripts and superscripts without losing unsupported notation', () => {
+    expect(formatScientificText('BiVO$_4$ and CoS_{2} x^{2+}')).toBe('BiVO₄ and CoS₂ x²⁺');
+    expect(formatScientificText('unknown_{ABC}')).toBe('unknown_{ABC}');
+    expect(
+      recoverScientificText(
+        'An Efficient BiVO4 Photoanode',
+        'An Efficient BiVO$_4$ Photoanode.pdf',
+      ),
+    ).toBe('An Efficient BiVO₄ Photoanode');
+    expect(recoverScientificText('BiVO4x BiVO4', 'BiVO$_4$.pdf')).toBe('BiVO4x BiVO₄');
   });
   it('formats custom labels and omits empty brackets', () => {
     expect(formatCitation('({{number}})', reference, 2)).toBe('(2)');
     expect(formatCitation(defaultCitationSettings.referenceTemplate, reference, 1)).toContain(
-      '[1] A; B. Test Article[J]. Journal, 2025',
+      '[1] A, B. Test Article[J]. Journal, 2025',
     );
     expect(formatCitation(defaultCitationSettings.referenceTemplate, reference, 1)).not.toContain(
       '()',

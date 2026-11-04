@@ -1,4 +1,5 @@
 'use client';
+import { recoverScientificText } from '@/lib/citation';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -629,7 +630,9 @@ export function Workspace() {
                   ?.name || '我的书架'}
               </span>
               <ChevronRight size={13} />
-              <strong>{detail?.title || '阅读空间'}</strong>
+              <strong>
+                {detail ? recoverScientificText(detail.title, detail.fileName) : '阅读空间'}
+              </strong>
             </div>
             <div className="header-actions">
               <span className="local-indicator">

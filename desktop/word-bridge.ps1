@@ -8,13 +8,28 @@ $stage = 'connect'
 function Encode-Data($value) { return [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($value | ConvertTo-Json -Depth 12 -Compress))) }
 function Decode-Data([string]$value) { return ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($value)) | ConvertFrom-Json) }
 function Entry-Range($entry) { if ($entry.kind -eq 'field') { return $entry.item.Result } else { return $entry.item.Range } }
+function Format-Scientific([string]$text) {
+  $text = [regex]::Replace($text, '\$([^$]*[_^][^$]*)\$', '$1')
+  $sub = @(0x2080,0x2081,0x2082,0x2083,0x2084,0x2085,0x2086,0x2087,0x2088,0x2089,0x208a,0x208b,0x208c,0x208d,0x208e,0x2090,0x2091,0x2095,0x1d62,0x2c7c,0x2096,0x2097,0x2098,0x2099,0x2092,0x209a,0x1d63,0x209b,0x209c,0x1d64,0x1d65,0x2093)
+  $sup = @(0x2070,0x00b9,0x00b2,0x00b3,0x2074,0x2075,0x2076,0x2077,0x2078,0x2079,0x207a,0x207b,0x207c,0x207d,0x207e,0x207f,0x2071,0x02e3)
+  return [regex]::Replace($text, '([_^])(?:\{([^{}]+)\}|([A-Za-z0-9+\-=()]))', {
+    param($match)
+    $letters = if ($match.Groups[1].Value -eq '_') { '0123456789+-=()aehijklmnoprstuvx' } else { '0123456789+-=()nix' }
+    $codes = if ($match.Groups[1].Value -eq '_') { $sub } else { $sup }
+    $value = if ($match.Groups[2].Success) { $match.Groups[2].Value } else { $match.Groups[3].Value }
+    $result = ''
+    foreach ($character in $value.ToCharArray()) { $index = $letters.IndexOf($character); if ($index -lt 0) { return $match.Value }; $result += [char]$codes[$index] }
+    return $result
+  })
+}
 function Format-Template([string]$template, $reference, [int]$number) {
   $labels = @{ journal='J'; book='M'; thesis='D'; conference='C'; web='EB/OL'; other='Z' }
   $values = @{ number=[string]$number; type=$labels[[string]$reference.type] }
   foreach ($name in @('title','authors','year','journal','volume','issue','pages','doi','publisher')) { $values[$name] = [string]$reference.$name }
+  $values.authors = $values.authors -replace '\s*[;\uFF1B]\s*', ', '
   $result = [regex]::Replace($template, '\{\{([a-z]+)\}\}', { param($m) if ($values.ContainsKey($m.Groups[1].Value)) { [string]$values[$m.Groups[1].Value] } else { '' } })
   $result = $result -replace '\(\s*\)', '' -replace '\[\s*\]', '' -replace '\s+([,.:;])', '$1' -replace '([,.:;])\s*([,.:;])+', '$1' -replace '\s{2,}', ' '
-  return ($result -replace '^[,.:;\s]+|[,;:\s]+$', '').Trim()
+  return Format-Scientific (($result -replace '^[,.:;\s]+|[,;:\s]+$', '').Trim())
 }
 function New-ManagedField($range, [string]$code) {
   # Zotero also creates a QUOTE field before replacing its code, avoiding ADDIN range issues.
@@ -108,8 +123,7 @@ try {
     $range = Entry-Range $entry
     $range.Font.Superscript = [int](-[int]$superscript)
   }
-  # Unicode heading without relying on the PowerShell 5.1 source-file encoding.
-  $lines = @((-join ([char[]]@(0x53c2,0x8003,0x6587,0x732e))))
+  $lines = @()
   foreach ($id in $ordered) { $lines += (Format-Template $settings.referenceTemplate $byId[$id] $numbers[$id]) }
   if ($bibliographies.Count -eq 0 -and $entries.Count -gt 0) {
     $stage = 'create bibliography field'
@@ -127,6 +141,10 @@ try {
     $range = Entry-Range $bibliography
     $range.Text = $lines -join "`r"
     $range = Entry-Range $bibliography
+    $range.Style = -1 # Word's built-in Normal style, independent of display language.
+    $range.Font.Bold = 0
+    $range.Font.Italic = 0
+    $range.Font.Underline = 0
     $range.Font.Superscript = 0
     $stage = 'format bibliography indentation'
     # Reset previous settings before applying character-unit (not approximate point) indents.
@@ -134,7 +152,10 @@ try {
     $range.ParagraphFormat.FirstLineIndent = 0
     $range.ParagraphFormat.CharacterUnitLeftIndent = 0
     $range.ParagraphFormat.CharacterUnitFirstLineIndent = 0
-    for ($index=2; $index -le $range.Paragraphs.Count; $index++) {
+    $range.ParagraphFormat.LineSpacingRule = 0
+    $range.ParagraphFormat.SpaceBefore = 0
+    $range.ParagraphFormat.SpaceAfter = 0
+    for ($index=1; $index -le $range.Paragraphs.Count; $index++) {
       $format = $range.Paragraphs.Item($index).Format
       if ($settings.bibliographyIndent -eq 'firstLine') { $format.CharacterUnitFirstLineIndent = $indent }
       elseif ($settings.bibliographyIndent -eq 'hanging') { $format.CharacterUnitLeftIndent = $indent; $format.CharacterUnitFirstLineIndent = -$indent }

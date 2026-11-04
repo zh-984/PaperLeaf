@@ -1,4 +1,5 @@
 'use client';
+import { formatScientificText, recoverScientificText } from '@/lib/citation';
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import {
   BookOpen,
@@ -302,16 +303,17 @@ export function ProjectShelf({
                             <FileText size={17} />
                           </span>
                           <span className="paper-mini">
-                            <strong title={paper.title}>{paper.title}</strong>
-                            <span className="paper-filename">{paper.fileName}</span>
+                            <strong title={recoverScientificText(paper.title, paper.fileName)}>
+                              {recoverScientificText(paper.title, paper.fileName)}
+                            </strong>
+                            <span className="paper-filename">
+                              {formatScientificText(paper.fileName)}
+                            </span>
                             <span className="paper-sub">
                               <i className={`status-dot ${paper.report?.status || 'idle'}`} />
                               {statusLabels[paper.report?.status || 'idle']}
                               <span>·</span>
                               {dateLabel(paper.createdAt)}
-                            </span>
-                            <span className="paper-position">
-                              读到第 {paper.lastPage} 页 / {paper.pageCount} 页
                             </span>
                           </span>
                           <ChevronRight className="paper-arrow" size={12} />

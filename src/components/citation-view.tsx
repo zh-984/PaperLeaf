@@ -6,6 +6,8 @@ import {
   defaultCitationSettings,
   formatAuthors,
   formatCitation,
+  formatScientificText,
+  recoverScientificText,
 } from '@/lib/citation';
 import type { CitationSettings, PaperDetail, ReferenceData } from '@/lib/types';
 import { Button } from './ui/button';
@@ -62,7 +64,13 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
       });
       const result = await window.paperleafDesktop.word({
         action,
-        reference: { ...reference, paperId: paper.id, authors: formatAuthors(reference.authors) },
+        reference: {
+          ...reference,
+          paperId: paper.id,
+          title: recoverScientificText(reference.title, paper.fileName),
+          journal: formatScientificText(reference.journal),
+          authors: formatAuthors(reference.authors),
+        },
         settings,
       });
       setMessage(
@@ -295,8 +303,7 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
               </div>
             </div>
             <p className="citation-hint">
-              缩进仅应用于文末每条参考文献，不影响“参考文献”标题。保存后点击“更新 Word
-              引用与参考文献”，即可应用到已有引用。
+              缩进应用于文末每条参考文献。保存后点击“更新 Word 引用与参考文献”，即可应用到已有引用。
             </p>
             <details className="citation-fields">
               <summary>格式字段对照表（点击展开）</summary>
@@ -331,7 +338,14 @@ export function CitationView({ paper }: { paper: PaperDetail }) {
                   formatCitation(settings.markerTemplate, reference, 1)
                 )}
               </p>
-              <p>文末：{formatCitation(settings.referenceTemplate, reference, 1)}</p>
+              <p>
+                文末：
+                {formatCitation(
+                  settings.referenceTemplate,
+                  { ...reference, title: recoverScientificText(reference.title, paper.fileName) },
+                  1,
+                )}
+              </p>
             </div>
           </>
         )}

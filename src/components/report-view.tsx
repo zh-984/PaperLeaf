@@ -1,4 +1,5 @@
 'use client';
+import { formatScientificText, recoverScientificText } from '@/lib/citation';
 import {
   ArrowDown,
   ArrowUpRight,
@@ -48,7 +49,7 @@ export function ReportView({
           <span className="eyebrow-en">READ WITH CLARITY</span>
         </div>
         <div className="report-heading">
-          <h1>{paper.title}</h1>
+          <h1>{recoverScientificText(paper.title, paper.fileName)}</h1>
           <span className={`report-status ${report?.status || 'idle'}`}>
             {running ? (
               <LoaderCircle size={13} className="spin" />
@@ -62,7 +63,7 @@ export function ReportView({
         </div>
         <p className="document-meta">
           {paper.pageCount} 页<span>·</span>
-          {paper.fileName}
+          {formatScientificText(paper.fileName)}
           <span>·</span>本地文献
         </p>
         <div className="report-intro">

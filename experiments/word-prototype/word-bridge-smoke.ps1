@@ -21,6 +21,7 @@ try {
     $settings=@{markerTemplate='[{{number}}]'; referenceTemplate='[{{number}}] {{authors}}. {{title}}. {{year}}.'; markerSuperscript=$true; bibliographyIndent='hanging'; indentCharacters=2}
     function Run-Bridge([string]$action,[string]$id,[string]$title) {
       if ($id -eq 'paperB') { $title += ' ' + (-join ([char[]]@(0x6d4b,0x8bd5))) }
+      if ($id -eq 'paperA' -and $title -eq 'Paper A') { $title += ' BiVO$_4$ x^{2+}' }
       $request=@{action=$action; testDocument=$file; settings=$settings; reference=@{paperId=$id; title=$title; type='journal'; authors='Tester'; year='2026'; journal=''; volume=''; issue=''; pages=''; doi=''; publisher=''}} | ConvertTo-Json -Depth 8 -Compress
       $output=$request | & node (Join-Path $PSScriptRoot '../../tests/word-invoke.mjs') --isolated
       if ($LASTEXITCODE -ne 0) { throw 'Word bridge failed' }
@@ -49,11 +50,14 @@ try {
     foreach ($r in $refs) {if ($r.Font.Superscript -ne -1) {throw "Superscript missing: $mode"}}
     if ($word.Selection.Font.Superscript -ne 0) {throw 'Following text inherits superscript'}
     $bib=Get-Bibliography
+    if ($bib.Text.StartsWith((-join ([char[]]@(0x53c2,0x8003,0x6587,0x732e))))) {throw 'Unexpected bibliography heading'}
+    if (!$bib.Text.Contains(('BiVO'+[char]0x2084)) -or !$bib.Text.Contains(('x'+[char]0x00b2+[char]0x207a))) {throw 'Scientific notation corrupted'}
+    if ($bib.ParagraphFormat.LineSpacingRule -ne 0 -or $bib.ParagraphFormat.SpaceBefore -ne 0 -or $bib.ParagraphFormat.SpaceAfter -ne 0) {throw 'Bibliography spacing is not single'}
+    if ($bib.Font.Bold -ne 0) {throw 'Bibliography inherited bold heading formatting'}
     if (!$bib.Text.Contains((-join ([char[]]@(0x6d4b,0x8bd5))))) {throw 'Unicode metadata corrupted'}
     if ($bib.Font.Superscript -ne 0) {throw 'Bibliography incorrectly superscripted'}
-    if ([math]::Abs($bib.Paragraphs.Item(2).Format.CharacterUnitFirstLineIndent + 2) -gt 0.05) {throw 'Hanging indent missing'}
-    if ([math]::Abs($bib.Paragraphs.Item(2).Format.CharacterUnitLeftIndent - 2) -gt 0.05) {throw 'Hanging left indent missing'}
-    if ($bib.Paragraphs.Item(1).Format.CharacterUnitFirstLineIndent -ne 0) {throw 'Heading indented'}
+    if ([math]::Abs($bib.Paragraphs.Item(1).Format.CharacterUnitFirstLineIndent + 2) -gt 0.05) {throw 'Hanging indent missing'}
+    if ([math]::Abs($bib.Paragraphs.Item(1).Format.CharacterUnitLeftIndent - 2) -gt 0.05) {throw 'Hanging left indent missing'}
     $word.Selection.SetRange(0,0)
     $repeat=Run-Bridge 'insert' 'paperB' 'Paper B'
     $refs=@(Get-Citations)
@@ -70,11 +74,11 @@ try {
     if ($last.references -ne 1) {throw 'Deleted reference remained'}
     foreach ($r in @(Get-Citations)) {if ($r.Text -ne '(1)' -or $r.Font.Superscript -ne 0) {throw 'Marker format update failed'}}
     $bib=Get-Bibliography
-    if ([math]::Abs($bib.Paragraphs.Item(2).Format.CharacterUnitFirstLineIndent - 1.5) -gt 0.05 -or $bib.Paragraphs.Item(2).Format.CharacterUnitLeftIndent -ne 0) {throw 'First-line indent update failed'}
+    if ([math]::Abs($bib.Paragraphs.Item(1).Format.CharacterUnitFirstLineIndent - 1.5) -gt 0.05 -or $bib.Paragraphs.Item(1).Format.CharacterUnitLeftIndent -ne 0) {throw 'First-line indent update failed'}
     $settings.bibliographyIndent='none'
     $null=Run-Bridge 'update' 'paperB' 'Paper B'
     $bib=Get-Bibliography
-    if ($bib.Paragraphs.Item(2).Format.CharacterUnitFirstLineIndent -ne 0 -or $bib.Paragraphs.Item(2).Format.CharacterUnitLeftIndent -ne 0) {throw 'Clear indent failed'}
+    if ($bib.Paragraphs.Item(1).Format.CharacterUnitFirstLineIndent -ne 0 -or $bib.Paragraphs.Item(1).Format.CharacterUnitLeftIndent -ne 0) {throw 'Clear indent failed'}
     $doc.Save(); $doc.Close(0); $doc=$null
     Write-Output "PASS $mode : insert, reorder, duplicates, superscript, indents, reopen, metadata update, deletion, old control compatibility."
   }

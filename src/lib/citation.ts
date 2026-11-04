@@ -28,9 +28,52 @@ export function formatAuthors(authors: string) {
     .split(/[;；]/)
     .map((name) => name.trim())
     .filter(Boolean);
-  if (names.length <= 3) return authors.trim();
+  if (names.length <= 3) return names.join(', ');
   const chinese = /[\u3400-\u9fff]/u.test(names[0]);
-  return `${names.slice(0, 3).join('; ')}${chinese ? '，等' : ', et al.'}`;
+  return `${names.slice(0, 3).join(', ')}${chinese ? ', 等' : ', et al.'}`;
+}
+
+const subscript = Object.fromEntries(
+  [...'0123456789+-=()aehijklmnoprstuvx'].map((c, i) => [
+    c,
+    [...'₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ'][i],
+  ]),
+);
+const superscript = Object.fromEntries(
+  [...'0123456789+-=()nix'].map((c, i) => [c, [...'⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱˣ'][i]]),
+);
+export function formatScientificText(text: string) {
+  return text
+    .replace(/\$([^$]*[_^][^$]*)\$/g, '$1')
+    .replace(
+      /([_^])(?:\{([^{}]+)\}|([A-Za-z0-9+\-=()]))/g,
+      (original, marker: string, group: string | undefined, single: string | undefined) => {
+        const value = group ?? single ?? '';
+        const map = marker === '_' ? subscript : superscript;
+        return [...value].every((character) => map[character])
+          ? [...value].map((character) => map[character]).join('')
+          : original;
+      },
+    );
+}
+
+/** Recover indices lost in PDF text extraction when the original filename contains them. */
+export function recoverScientificText(text: string, fileName: string) {
+  const source = fileName.replace(/\$([^$]*[_^][^$]*)\$/g, '$1');
+  const tokens =
+    source.match(/[A-Za-z][A-Za-z0-9]*(?:[_^](?:\{[A-Za-z0-9+\-=()]+\}|[A-Za-z0-9+\-=()]))+/g) ??
+    [];
+  let result = text;
+  for (const token of tokens) {
+    const plain = token
+      .replace(/[_^]\{([^{}]+)\}/g, '$1')
+      .replace(/[_^]([A-Za-z0-9+\-=()])/g, '$1');
+    const formatted = formatScientificText(token);
+    if (formatted === token) continue;
+    const escaped = plain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    result = result.replace(new RegExp(`${escaped}(?![A-Za-z0-9])`, 'g'), () => formatted);
+  }
+  return formatScientificText(result);
 }
 
 export function formatCitation(template: string, reference: ReferenceData, number: number) {
@@ -48,13 +91,15 @@ export function formatCitation(template: string, reference: ReferenceData, numbe
     type: labels[reference.type],
     number: String(number),
   };
-  return template
-    .replace(/\{\{([a-z]+)\}\}/g, (_, name: string) => fields[name] || '')
-    .replace(/\(\s*\)/g, '')
-    .replace(/\[\s*\]/g, '')
-    .replace(/\s+([,.:;])/g, '$1')
-    .replace(/([,.:;])\s*([,.:;])+/g, '$1')
-    .replace(/\s{2,}/g, ' ')
-    .replace(/^[,.:;\s]+|[,;:\s]+$/g, '')
-    .trim();
+  return formatScientificText(
+    template
+      .replace(/\{\{([a-z]+)\}\}/g, (_, name: string) => fields[name] || '')
+      .replace(/\(\s*\)/g, '')
+      .replace(/\[\s*\]/g, '')
+      .replace(/\s+([,.:;])/g, '$1')
+      .replace(/([,.:;])\s*([,.:;])+/g, '$1')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/^[,.:;\s]+|[,;:\s]+$/g, '')
+      .trim(),
+  );
 }
