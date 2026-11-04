@@ -8,6 +8,7 @@ import {
   formatCitation,
   formatScientificText,
   recoverScientificText,
+  scientificRuns,
 } from '@/lib/citation';
 import type { ReferenceData } from '@/lib/types';
 import { citationSettingsSchema } from '@/lib/validation';
@@ -57,6 +58,16 @@ describe('citation information and formatting', () => {
   it('renders common scientific subscripts and superscripts without losing unsupported notation', () => {
     expect(formatScientificText('BiVO$_4$ and CoS_{2} x^{2+}')).toBe('BiVO₄ and CoS₂ x²⁺');
     expect(formatScientificText('unknown_{ABC}')).toBe('unknown_{ABC}');
+    expect(scientificRuns('x_{ABC}')).toEqual([
+      { text: 'x', script: 'normal' },
+      { text: 'ABC', script: 'sub' },
+    ]);
+    expect(scientificRuns('BiVO₄ x²')).toEqual([
+      { text: 'BiVO', script: 'normal' },
+      { text: '4', script: 'sub' },
+      { text: ' x', script: 'normal' },
+      { text: '2', script: 'sup' },
+    ]);
     expect(
       recoverScientificText(
         'An Efficient BiVO4 Photoanode',

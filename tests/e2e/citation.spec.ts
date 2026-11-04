@@ -31,6 +31,13 @@ test('reference data, editable templates and manual AI suggestions are safe and 
     await page.goto(`${base}/?paper=${paper.id}`);
     await page.getByRole('tab', { name: '文献引用' }).click();
     await expect(page.getByLabel('文献标题')).toHaveValue('Reference Demo');
+    await page.getByLabel('文献标题').fill('BiVO4 test');
+    await page
+      .getByLabel('文献标题')
+      .evaluate((element) => (element as HTMLInputElement).setSelectionRange(4, 5));
+    await page.getByRole('button', { name: '下标 x₂' }).click();
+    await expect(page.getByLabel('文献标题')).toHaveValue('BiVO_{4} test');
+    await expect(page.locator('.citation-title-preview sub')).toHaveText('4');
     await page.getByLabel('作者', { exact: true }).fill('Manual Author');
     await page.getByLabel('文中标号', { exact: true }).fill('({{number}})');
     await page.getByLabel('文末参考文献缩进').selectOption('hanging');

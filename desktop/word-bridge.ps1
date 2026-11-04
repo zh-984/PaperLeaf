@@ -8,6 +8,33 @@ $stage = 'connect'
 function Encode-Data($value) { return [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($value | ConvertTo-Json -Depth 12 -Compress))) }
 function Decode-Data([string]$value) { return ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($value)) | ConvertFrom-Json) }
 function Entry-Range($entry) { if ($entry.kind -eq 'field') { return $entry.item.Result } else { return $entry.item.Range } }
+function Get-ScientificFormatting([string]$text) {
+  $sub = @(0x2080,0x2081,0x2082,0x2083,0x2084,0x2085,0x2086,0x2087,0x2088,0x2089,0x208a,0x208b,0x208c,0x208d,0x208e,0x2090,0x2091,0x2095,0x1d62,0x2c7c,0x2096,0x2097,0x2098,0x2099,0x2092,0x209a,0x1d63,0x209b,0x209c,0x1d64,0x1d65,0x2093)
+  $sup = @(0x2070,0x00b9,0x00b2,0x00b3,0x2074,0x2075,0x2076,0x2077,0x2078,0x2079,0x207a,0x207b,0x207c,0x207d,0x207e,0x207f,0x2071,0x02e3)
+  $map = @{}
+  $letters = '0123456789+-=()aehijklmnoprstuvx'
+  for ($i=0; $i -lt $sub.Count; $i++) { $map[[char]$sub[$i]] = @{text=$letters[$i]; script='sub'} }
+  $letters = '0123456789+-=()nix'
+  for ($i=0; $i -lt $sup.Count; $i++) { $map[[char]$sup[$i]] = @{text=$letters[$i]; script='sup'} }
+  $plain = ''; $runs = @(); $position = 0
+  for ($cursor=0; $cursor -lt $text.Length; $cursor++) {
+    $character = $text[$cursor]
+    if (($character -eq '_' -or $character -eq '^') -and $cursor+1 -lt $text.Length -and $text[$cursor+1] -eq '{') {
+      $closing = $text.IndexOf('}', $cursor+2)
+      if ($closing -gt $cursor+2) {
+        $script = if ($character -eq '_') { 'sub' } else { 'sup' }
+        foreach ($letter in $text.Substring($cursor+2,$closing-$cursor-2).ToCharArray()) {
+          $plain += $letter; $runs += @{position=$position; script=$script}; $position++
+        }
+        $cursor=$closing; continue
+      }
+    }
+    if ($map.ContainsKey($character)) { $item=$map[$character]; $plain += $item.text; $runs += @{position=$position; script=$item.script} }
+    else { $plain += $character }
+    $position++
+  }
+  return @{text=$plain; runs=$runs}
+}
 function Format-Scientific([string]$text) {
   $text = [regex]::Replace($text, '\$([^$]*[_^][^$]*)\$', '$1')
   $sub = @(0x2080,0x2081,0x2082,0x2083,0x2084,0x2085,0x2086,0x2087,0x2088,0x2089,0x208a,0x208b,0x208c,0x208d,0x208e,0x2090,0x2091,0x2095,0x1d62,0x2c7c,0x2096,0x2097,0x2098,0x2099,0x2092,0x209a,0x1d63,0x209b,0x209c,0x1d64,0x1d65,0x2093)
@@ -139,13 +166,21 @@ try {
     $stage = 'update bibliography text'
     if ($bibliography.kind -eq 'field') { $bibliography.item.Code.Text = ' ADDIN PAPERLEAF_BIBLIOGRAPHY ' + (Encode-Data @{version=1; settings=$settings}) + ' ' }
     $range = Entry-Range $bibliography
-    $range.Text = $lines -join "`r"
+    $scientific = Get-ScientificFormatting ($lines -join "`r")
+    $range.Text = $scientific.text
     $range = Entry-Range $bibliography
     $range.Style = -1 # Word's built-in Normal style, independent of display language.
+    $range.ListFormat.RemoveNumbers()
+    $range.ParagraphFormat.OutlineLevel = 10
     $range.Font.Bold = 0
     $range.Font.Italic = 0
     $range.Font.Underline = 0
     $range.Font.Superscript = 0
+    $range.Font.Subscript = 0
+    $range.Font.Name = 'Times New Roman'
+    $range.Font.NameAscii = 'Times New Roman'
+    $range.Font.NameOther = 'Times New Roman'
+    $range.Font.NameFarEast = -join ([char[]]@(0x5b8b,0x4f53))
     $stage = 'format bibliography indentation'
     # Reset previous settings before applying character-unit (not approximate point) indents.
     $range.ParagraphFormat.LeftIndent = 0
@@ -156,9 +191,22 @@ try {
     $range.ParagraphFormat.SpaceBefore = 0
     $range.ParagraphFormat.SpaceAfter = 0
     for ($index=1; $index -le $range.Paragraphs.Count; $index++) {
+      $stage = 'indent paragraph ' + $index
       $format = $range.Paragraphs.Item($index).Format
       if ($settings.bibliographyIndent -eq 'firstLine') { $format.CharacterUnitFirstLineIndent = $indent }
-      elseif ($settings.bibliographyIndent -eq 'hanging') { $format.CharacterUnitLeftIndent = $indent; $format.CharacterUnitFirstLineIndent = -$indent }
+      elseif ($settings.bibliographyIndent -eq 'hanging') {
+        $format.CharacterUnitLeftIndent = $indent
+        $leftPoints = [single]$format.LeftIndent
+        # Word combines character-unit and point-based indents; clear character units first.
+        $format.CharacterUnitLeftIndent = 0
+        $format.CharacterUnitFirstLineIndent = 0
+        $format.LeftIndent = $leftPoints
+        $format.FirstLineIndent = -$leftPoints
+      }
+    }
+    foreach ($run in $scientific.runs) {
+      $characterRange = $range.Characters.Item($run.position + 1)
+      if ($run.script -eq 'sub') { $characterRange.Font.Subscript = -1 } else { $characterRange.Font.Superscript = -1 }
     }
   }
   if ($null -ne $oldPart) {

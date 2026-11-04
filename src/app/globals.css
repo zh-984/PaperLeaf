@@ -3614,9 +3614,35 @@ textarea::placeholder {
   gap: 7px;
   font-size: 14px;
 }
-.citation-grid label:nth-child(2),
-.citation-grid label:nth-child(3) {
+.citation-grid > div:nth-child(2),
+.citation-grid > div:nth-child(3) {
   grid-column: 1 / -1;
+}
+.citation-grid > div {
+  min-width: 0;
+}
+.citation-grid > div > label {
+  display: inline-block;
+  margin-bottom: 7px;
+}
+.citation-script-actions {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: 14px;
+}
+.citation-script-actions button {
+  border: 1px solid #bfc9b9;
+  border-radius: 5px;
+  padding: 2px 8px;
+  cursor: pointer;
+  background: white;
+  color: black;
+  font-size: 13px;
+}
+.citation-title-preview {
+  margin-top: 8px;
+  font-size: 16px;
+  color: black;
 }
 .citation-formats {
   display: grid;

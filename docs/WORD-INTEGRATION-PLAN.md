@@ -8,7 +8,7 @@ Windows 桌面版可从“文献引用”页插入到当前打开的 Microsoft W
 
 正文引用默认以上标显示，例如上标的 [1]、[2]，可在“文中标号显示”改为普通文字。标号后的正常输入不会继承上标。文末条目采用普通正文样式和单倍行距，不自动添加标题；可选择无缩进、首行缩进或悬挂缩进，字符数支持 0–10（如 1.5、2）。作者输入时用分号分隔，输出时用逗号分隔。修改后点击“更新 Word 引用与参考文献”。
 
-常见数字及部分字母上下标（例如 `BiVO$_4$`、`CoS_{2}`、`x^{2+}`）会显示和插入为对应 Unicode 字符；无法转换的复杂数学表达式保留原文，需手动核对。对于提取时丢失角标的标题，会尝试根据文件名中的同名片段恢复。
+常见数字及部分字母上下标（例如 `BiVO$_4$`、`CoS_{2}`、`x^{2+}`）会显示为 HTML 上下标，并插入为 Word 的真正字符格式。手动标记支持任意选中文字；复杂数学表达式仍需手动核对。对于提取时丢失角标的标题，会尝试根据文件名中的同名片段恢复。
 
 格式输入框下方的“格式字段对照表”说明每个占位符。可按期刊要求编辑字段顺序、标点及字段取舍。例如：`[{{number}}] {{authors}}. {{title}}[{{type}}]. {{journal}}, {{year}}, {{volume}}({{issue}}): {{pages}}.`。这些是可编辑文本模板，不是完整 CSL 样式引擎；缺失字段的空括号和重复标点会清理，但仍需人工核对最终格式。
 
@@ -21,3 +21,5 @@ Windows 桌面版可从“文献引用”页插入到当前打开的 Microsoft W
 实现研究参考了 [Zotero Word 联动架构](https://github.com/zotero/zotero-word-for-windows-integration/blob/master/build/zoteroWinWordIntegration/document.cpp) 中先创建 QUOTE 域再写入 ADDIN 域代码的方式，未复制其源码或使用其商标。源码下载在用户指定的 D:/wyproject_intresting/zotero/word-integration。知页桌面桥接使用独立实现的 PowerShell COM 操作，原有 MIT 许可未改变。缩进使用 Word 的 CharacterUnitLeftIndent / CharacterUnitFirstLineIndent，按字符计量。
 
 隔离测试命令：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File experiments/word-prototype/word-bridge-smoke.ps1`。覆盖 .doc、.docx、旧内容控件引用三种文档：前插重编号、重复引用去重、单个文末区块、保存重开、书目信息更新、上标及普通文字切换、三种缩进、删除引用后的重排。测试在独立 Word 实例及 .test-data/word-smoke 临时文件运行，不修改打开的用户文档。尚未承诺完整 CSL 标准、多人协作或所有 Office 版本兼容性。
+
+0.8.7：标题字段旁支持选中文字后设置上标/下标，输入中用 ^{文字} / _{文字} 保存，预览使用真实 HTML 上下标。Word 使用普通字符和 Font.Superscript / Font.Subscript，英文字体及标点为 Times New Roman，中文为宋体。悬挂缩进按首行零偏移、续行指定字符宽度执行。

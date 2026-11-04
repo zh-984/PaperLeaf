@@ -21,7 +21,7 @@ try {
     $settings=@{markerTemplate='[{{number}}]'; referenceTemplate='[{{number}}] {{authors}}. {{title}}. {{year}}.'; markerSuperscript=$true; bibliographyIndent='hanging'; indentCharacters=2}
     function Run-Bridge([string]$action,[string]$id,[string]$title) {
       if ($id -eq 'paperB') { $title += ' ' + (-join ([char[]]@(0x6d4b,0x8bd5))) }
-      if ($id -eq 'paperA' -and $title -eq 'Paper A') { $title += ' BiVO$_4$ x^{2+}' }
+      if ($id -eq 'paperA' -and $title -eq 'Paper A') { $title += ' BiVO$_4$ x^{2+} y_{AB}' }
       $request=@{action=$action; testDocument=$file; settings=$settings; reference=@{paperId=$id; title=$title; type='journal'; authors='Tester'; year='2026'; journal=''; volume=''; issue=''; pages=''; doi=''; publisher=''}} | ConvertTo-Json -Depth 8 -Compress
       $output=$request | & node (Join-Path $PSScriptRoot '../../tests/word-invoke.mjs') --isolated
       if ($LASTEXITCODE -ne 0) { throw 'Word bridge failed' }
@@ -51,13 +51,22 @@ try {
     if ($word.Selection.Font.Superscript -ne 0) {throw 'Following text inherits superscript'}
     $bib=Get-Bibliography
     if ($bib.Text.StartsWith((-join ([char[]]@(0x53c2,0x8003,0x6587,0x732e))))) {throw 'Unexpected bibliography heading'}
-    if (!$bib.Text.Contains(('BiVO'+[char]0x2084)) -or !$bib.Text.Contains(('x'+[char]0x00b2+[char]0x207a))) {throw 'Scientific notation corrupted'}
+    if (!$bib.Text.Contains('BiVO4') -or !$bib.Text.Contains('x2+')) {throw 'Scientific base text corrupted'}
+    $subRange=$bib.Duplicate
+    if (!$subRange.Find.Execute('BiVO4')) {throw 'Formula missing'}
+    $subDigit=$doc.Range($subRange.End-1,$subRange.End)
+    if ($subDigit.Font.Subscript -ne -1 -or $subDigit.Text -ne '4') {throw ('Not a real Word subscript: text='+$subDigit.Text+' flag='+$subDigit.Font.Subscript+' preceding='+$doc.Range($subRange.Start,$subRange.End).Font.Subscript)}
+    $superRange=$bib.Duplicate
+    if (!$superRange.Find.Execute('x2+')) {throw 'Superscript formula missing'}
+    if ($doc.Range($superRange.Start+1,$superRange.End).Font.Superscript -ne -1) {throw 'Not a real Word superscript'}
+    $manual=$bib.Duplicate
+    if (!$manual.Find.Execute('yAB') -or $doc.Range($manual.Start+1,$manual.End).Font.Subscript -ne -1) {throw 'Manual letter subscripts failed'}
+    if ($bib.Font.NameAscii -ne 'Times New Roman' -or $bib.Font.NameFarEast -ne (-join ([char[]]@(0x5b8b,0x4f53)))) {throw 'Bibliography fonts incorrect'}
+    $paragraphFormat=$bib.Paragraphs.Item(1).Format
+    if ([math]::Abs($paragraphFormat.LeftIndent + $paragraphFormat.FirstLineIndent) -gt 0.1 -or $paragraphFormat.LeftIndent -le 0) {throw ('Hanging indent moved first line: left='+$paragraphFormat.LeftIndent+' first='+$paragraphFormat.FirstLineIndent)}
     if ($bib.ParagraphFormat.LineSpacingRule -ne 0 -or $bib.ParagraphFormat.SpaceBefore -ne 0 -or $bib.ParagraphFormat.SpaceAfter -ne 0) {throw 'Bibliography spacing is not single'}
     if ($bib.Font.Bold -ne 0) {throw 'Bibliography inherited bold heading formatting'}
     if (!$bib.Text.Contains((-join ([char[]]@(0x6d4b,0x8bd5))))) {throw 'Unicode metadata corrupted'}
-    if ($bib.Font.Superscript -ne 0) {throw 'Bibliography incorrectly superscripted'}
-    if ([math]::Abs($bib.Paragraphs.Item(1).Format.CharacterUnitFirstLineIndent + 2) -gt 0.05) {throw 'Hanging indent missing'}
-    if ([math]::Abs($bib.Paragraphs.Item(1).Format.CharacterUnitLeftIndent - 2) -gt 0.05) {throw 'Hanging left indent missing'}
     $word.Selection.SetRange(0,0)
     $repeat=Run-Bridge 'insert' 'paperB' 'Paper B'
     $refs=@(Get-Citations)

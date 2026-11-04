@@ -57,6 +57,28 @@ export function formatScientificText(text: string) {
     );
 }
 
+export function scientificRuns(text: string) {
+  const reverse = new Map<string, { text: string; script: 'sub' | 'sup' }>();
+  for (const [plain, character] of Object.entries(subscript))
+    reverse.set(character, { text: plain, script: 'sub' });
+  for (const [plain, character] of Object.entries(superscript))
+    reverse.set(character, { text: plain, script: 'sup' });
+  const runs: { text: string; script: 'sub' | 'sup' | 'normal' }[] = [];
+  const pieces = text.split(/([_^]\{[^{}]+\})/g);
+  for (const piece of pieces) {
+    const explicit = /^([_^])\{([^{}]+)\}$/.exec(piece);
+    for (const character of explicit ? explicit[2] : piece) {
+      const run = explicit
+        ? { text: character, script: explicit[1] === '_' ? ('sub' as const) : ('sup' as const) }
+        : (reverse.get(character) ?? { text: character, script: 'normal' as const });
+      const previous = runs.at(-1);
+      if (previous?.script === run.script) previous.text += run.text;
+      else runs.push({ ...run });
+    }
+  }
+  return runs;
+}
+
 /** Recover indices lost in PDF text extraction when the original filename contains them. */
 export function recoverScientificText(text: string, fileName: string) {
   const source = fileName.replace(/\$([^$]*[_^][^$]*)\$/g, '$1');

@@ -1,4 +1,5 @@
 'use client';
+import { ScientificText } from './scientific-text';
 import { recoverScientificText } from '@/lib/citation';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -631,7 +632,11 @@ export function Workspace() {
               </span>
               <ChevronRight size={13} />
               <strong>
-                {detail ? recoverScientificText(detail.title, detail.fileName) : '阅读空间'}
+                {detail ? (
+                  <ScientificText text={recoverScientificText(detail.title, detail.fileName)} />
+                ) : (
+                  '阅读空间'
+                )}
               </strong>
             </div>
             <div className="header-actions">

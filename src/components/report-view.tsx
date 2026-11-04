@@ -1,4 +1,5 @@
 'use client';
+import { ScientificText } from './scientific-text';
 import { formatScientificText, recoverScientificText } from '@/lib/citation';
 import {
   ArrowDown,
@@ -49,7 +50,9 @@ export function ReportView({
           <span className="eyebrow-en">READ WITH CLARITY</span>
         </div>
         <div className="report-heading">
-          <h1>{recoverScientificText(paper.title, paper.fileName)}</h1>
+          <h1>
+            <ScientificText text={recoverScientificText(paper.title, paper.fileName)} />
+          </h1>
           <span className={`report-status ${report?.status || 'idle'}`}>
             {running ? (
               <LoaderCircle size={13} className="spin" />

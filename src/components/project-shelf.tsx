@@ -1,4 +1,5 @@
 'use client';
+import { ScientificText } from './scientific-text';
 import { formatScientificText, recoverScientificText } from '@/lib/citation';
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import {
@@ -304,7 +305,9 @@ export function ProjectShelf({
                           </span>
                           <span className="paper-mini">
                             <strong title={recoverScientificText(paper.title, paper.fileName)}>
-                              {recoverScientificText(paper.title, paper.fileName)}
+                              <ScientificText
+                                text={recoverScientificText(paper.title, paper.fileName)}
+                              />
                             </strong>
                             <span className="paper-filename">
                               {formatScientificText(paper.fileName)}
