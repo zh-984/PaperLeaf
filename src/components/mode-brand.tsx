@@ -35,8 +35,10 @@ export function ModeBrand({
         <span className="brand-icon">
           <Leaf size={22} />
         </span>
-        <span>
-          知页{mode === 'work' && <small className="brand-work">work</small>}
+        <span className="brand-copy">
+          <span className="brand-title">
+            知页{mode === 'work' && <small className="brand-work">work</small>}
+          </span>
           <span className="brand-en">PaperLeaf {mode === 'read' ? 'Read' : 'Work'}</span>
         </span>
         <ChevronDown size={17} />

@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
+const version = JSON.parse(await readFile('package.json', 'utf8')).version;
 const JSZip = createRequire(require.resolve('mammoth/package.json'))('jszip');
 const root = path.resolve('.test-data/desktop-work');
 await mkdir(root, { recursive: true });
@@ -61,7 +62,7 @@ async function launch() {
   });
   const page = await desktop.firstWindow();
   await page.waitForURL(/^http:\/\/127\.0\.0\.1:\d+\//, { timeout: 60000 });
-  expect(await desktop.evaluate(({ app }) => app.getVersion())).toBe('0.9.0');
+  expect(await desktop.evaluate(({ app }) => app.getVersion())).toBe(version);
   return page;
 }
 try {
@@ -126,7 +127,7 @@ try {
   console.log(
     JSON.stringify({
       packagedWork: true,
-      version: '0.9.0',
+      version,
       realDocxExtracted: true,
       analysisSaved: true,
       fullRestartPreserved: true,

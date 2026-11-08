@@ -295,7 +295,7 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
             {uploading ? <LoaderCircle size={17} className="spin" /> : <Plus size={18} />}{' '}
             {uploading ? '正在提取稿件…' : '导入稿件'}
           </Button>
-          <p className="work-small">DOCX / PDF · 每份最多 20 MiB</p>
+          <span className="upload-destination">DOCX / PDF · 每份最多 20 MiB</span>
           <label className="shelf-search">
             <Search size={15} />
             <input
@@ -332,15 +332,17 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
               <p className="work-small">导入稿件后，在这里继续检查。</p>
             )}
           </nav>
-          <div className="work-shelf-footer">
-            <ShieldCheck size={17} />
-            <p>
-              稿件和报告保存在本机
-              <br />
-              <small>检查由你手动开始</small>
-            </p>
-            <button onClick={() => openSettings()}>
-              <Settings2 size={17} /> 设置与隐私
+          <div className="shelf-footer work-shelf-footer">
+            <div className="local-badge">
+              <ShieldCheck size={16} />
+              <span>
+                稿件和报告保存在本机
+                <small>检查由你手动开始</small>
+              </span>
+            </div>
+            <button className="settings-button" onClick={() => openSettings()}>
+              <Settings2 size={16} /> 设置与隐私
+              <ChevronRight size={14} />
             </button>
           </div>
         </aside>
@@ -392,7 +394,7 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
           {notice && (
             <div role="status" className="work-notice">
               <Check size={16} />
-              {notice}
+              <span>{notice}</span>
               <button aria-label="关闭 Work 提示" onClick={() => setNotice('')}>
                 <X size={15} />
               </button>
