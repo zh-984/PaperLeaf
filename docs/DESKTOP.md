@@ -65,6 +65,8 @@ pnpm test:desktop    # 实际运行 release/win-unpacked/Paperleaf.exe
 
 ## 验证范围
 
+升级时如遇到“Failed to uninstall old application files”，先退出知页并备份 `%APPDATA%\Paperleaf`。这表示旧卸载器未能清理程序文件，可先从 Windows 应用列表常规卸载旧版本，再安装新版。本项目卸载器默认保留资料；不要手动删除上述数据目录，也不要用空数据库覆盖已有资料。
+
 自动化回归使用本机模拟服务，不调用用户付费 API。实际第三方模型的效果和可用性取决于所选服务。
 
 安装目录为 `%LOCALAPPDATA%\Programs\Paperleaf`，桌面快捷方式仍为“知页 Paperleaf”。安装器不包含个人文献和 Key。此构建未使用代码签名证书。
