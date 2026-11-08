@@ -82,10 +82,10 @@ test('AI configuration needs only API details and model, with immediate applicat
   request,
 }) => {
   await page.goto(base);
-  await expect(page.locator('.workspace-loading')).toHaveCount(0);
-  await page.evaluate(() => window.dispatchEvent(new Event('paperleaf:open-settings')));
+  await page.getByRole('button', { name: '设置与隐私', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'AI 配置', exact: true }).click();
   await dialog.getByLabel('API 地址').fill('http://127.0.0.1:4123/v1/chat/completions');
   await dialog.getByLabel(/API Key/).fill('local-test-key-not-a-real-secret');
   await dialog.getByLabel('模型名称').fill('test-simulator');

@@ -1,5 +1,6 @@
 'use client';
 import { ScientificText } from './scientific-text';
+import { ModeBrand } from './mode-brand';
 import { formatScientificText, recoverScientificText } from '@/lib/citation';
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import {
@@ -7,7 +8,6 @@ import {
   ChevronDown,
   ChevronRight,
   FileText,
-  Leaf,
   LoaderCircle,
   MoreHorizontal,
   Plus,
@@ -46,6 +46,7 @@ export function ProjectShelf({
   defaultCollapsed,
   onDefaultCollapse,
   createSignal,
+  onModeChange,
 }: {
   papers: Paper[];
   shelves: Bookshelf[];
@@ -68,6 +69,7 @@ export function ProjectShelf({
   defaultCollapsed: boolean;
   onDefaultCollapse: (value: boolean) => void;
   createSignal: number;
+  onModeChange?: (mode: 'read' | 'work') => void;
 }) {
   const [query, setQuery] = useState(''),
     [draft, setDraft] = useState<{ id: string | null; name: string } | null>(null),
@@ -161,14 +163,7 @@ export function ProjectShelf({
     <>
       {open && <button className="shelf-backdrop" aria-label="关闭书架" onClick={onClose} />}
       <aside ref={rootRef} className={`shelf project-shelf ${open ? 'shelf-open' : ''}`}>
-        <div className="brand">
-          <span className="brand-icon">
-            <Leaf size={22} />
-          </span>
-          <span>
-            知页<span className="brand-en">PAPERLEAF</span>
-          </span>
-        </div>
+        <ModeBrand mode="read" onChange={onModeChange || (() => undefined)} />
         <button className="shelf-mobile-close" aria-label="关闭书架" onClick={onClose}>
           <X size={20} />
         </button>

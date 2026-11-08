@@ -2,6 +2,53 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model WorkDocument {
+  id String @id @default(cuid())
+  title String
+  fileName String
+  filePath String @unique
+  fileSize Int
+  hash String @unique
+  paragraphsJson String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tasks WorkTask[]
+  sources WorkSource[]
+  caches WorkCache[]
+}
+model WorkTask {
+  id String @id @default(cuid())
+  documentId String
+  kind String
+  status String @default("running")
+  progress String @default("")
+  error String @default("")
+  resultsJson String @default("{}")
+  paramsJson String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  document WorkDocument @relation(fields:[documentId], references:[id], onDelete:Cascade)
+  @@index([documentId, createdAt])
+}
+model WorkSource {
+  id String @id @default(cuid())
+  documentId String
+  title String
+  url String
+  text String
+  createdAt DateTime @default(now())
+  document WorkDocument @relation(fields:[documentId], references:[id], onDelete:Cascade)
+  @@unique([documentId,url])
+}
+model WorkCache {
+  id String @id @default(cuid())
+  documentId String
+  key String
+  content String
+  document WorkDocument @relation(fields:[documentId], references:[id], onDelete:Cascade)
+  @@unique([documentId,key])
+}
+
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
@@ -138,4 +185,10 @@ model AppPreference {
   readerFitWidth        Boolean @default(true)
   defaultShelfCollapsed Boolean @default(false)
   theme                 String  @default("green")
+}
+
+model WorkPreference {
+  id         String @id @default("local")
+  mode       String @default("read")
+  documentId String @default("")
 }

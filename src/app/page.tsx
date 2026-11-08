@@ -1,4 +1,4 @@
-import { Workspace } from '@/components/workspace';
+import { App } from '@/components/app';
 export default function Page() {
-  return <Workspace />;
+  return <App />;
 }

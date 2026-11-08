@@ -1,0 +1,10 @@
+CREATE TABLE "WorkDocument" ("id" TEXT NOT NULL PRIMARY KEY,"title" TEXT NOT NULL,"fileName" TEXT NOT NULL,"filePath" TEXT NOT NULL,"fileSize" INTEGER NOT NULL,"hash" TEXT NOT NULL,"paragraphsJson" TEXT NOT NULL,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL);
+CREATE UNIQUE INDEX "WorkDocument_filePath_key" ON "WorkDocument"("filePath");
+CREATE UNIQUE INDEX "WorkDocument_hash_key" ON "WorkDocument"("hash");
+CREATE TABLE "WorkTask" ("id" TEXT NOT NULL PRIMARY KEY,"documentId" TEXT NOT NULL,"kind" TEXT NOT NULL,"status" TEXT NOT NULL DEFAULT 'running',"progress" TEXT NOT NULL DEFAULT '',"error" TEXT NOT NULL DEFAULT '',"resultsJson" TEXT NOT NULL DEFAULT '{}',"paramsJson" TEXT NOT NULL,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL,FOREIGN KEY("documentId") REFERENCES "WorkDocument"("id") ON DELETE CASCADE ON UPDATE CASCADE);
+CREATE INDEX "WorkTask_documentId_createdAt_idx" ON "WorkTask"("documentId","createdAt");
+CREATE UNIQUE INDEX "WorkTask_runningDocument" ON "WorkTask"("documentId") WHERE "status"='running';
+CREATE TABLE "WorkSource" ("id" TEXT NOT NULL PRIMARY KEY,"documentId" TEXT NOT NULL,"title" TEXT NOT NULL,"url" TEXT NOT NULL,"text" TEXT NOT NULL,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY("documentId") REFERENCES "WorkDocument"("id") ON DELETE CASCADE ON UPDATE CASCADE);
+CREATE UNIQUE INDEX "WorkSource_documentId_url_key" ON "WorkSource"("documentId","url");
+CREATE TABLE "WorkCache" ("id" TEXT NOT NULL PRIMARY KEY,"documentId" TEXT NOT NULL,"key" TEXT NOT NULL,"content" TEXT NOT NULL,FOREIGN KEY("documentId") REFERENCES "WorkDocument"("id") ON DELETE CASCADE ON UPDATE CASCADE);
+CREATE UNIQUE INDEX "WorkCache_documentId_key_key" ON "WorkCache"("documentId","key");

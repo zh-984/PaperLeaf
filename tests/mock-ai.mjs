@@ -31,19 +31,26 @@ const server = http.createServer(async (request, response) => {
     send(200, { ok: true });
     return;
   }
+  if (request.url === '/detect') {
+    const payload = JSON.parse(raw);
+    send(200, { results: payload.paragraphs.map((item) => ({ id: item.id, score: 0.85 })) });
+    return;
+  }
   if (request.url !== '/v1/chat/completions') {
     send(404, {});
     return;
   }
   const body = JSON.parse(raw);
   const system = body.messages[0].content;
-  const task = system.includes('VISUAL_SUMMARY')
-    ? 'visual-summary'
-    : system.includes('REFERENCE_METADATA')
-      ? 'reference-metadata'
-      : system.includes('CHUNK_SUMMARY')
-        ? 'chunk-summary'
-        : system.match(/REPORT_SECTION (\w+)/)?.[1] || 'ask';
+  const task = system.includes('[task:work-analysis]')
+    ? 'work-analysis'
+    : system.includes('VISUAL_SUMMARY')
+      ? 'visual-summary'
+      : system.includes('REFERENCE_METADATA')
+        ? 'reference-metadata'
+        : system.includes('CHUNK_SUMMARY')
+          ? 'chunk-summary'
+          : system.match(/REPORT_SECTION (\w+)/)?.[1] || 'ask';
   const input = body.messages
     .map((message) =>
       typeof message.content === 'string'
@@ -93,7 +100,19 @@ const server = http.createServer(async (request, response) => {
   }
   await new Promise((resolve) => setTimeout(resolve, delay));
   let content;
-  if (task === 'reference-metadata')
+  if (task === 'work-analysis') {
+    const payload = JSON.parse(body.messages.at(-1).content);
+    content = JSON.stringify({
+      findings: payload.paragraphs.map((paragraph) => ({
+        paragraphId: paragraph.id,
+        risk: 'medium',
+        quote: paragraph.text.slice(0, 45),
+        reason: '本地模拟：表达可以更具体，不能证明AI来源',
+        suggestion: '补充研究条件并核对原始数据（本地测试）',
+        revision: '',
+      })),
+    });
+  } else if (task === 'reference-metadata')
     content = JSON.stringify({
       type: 'journal',
       title: 'Suggested Title',

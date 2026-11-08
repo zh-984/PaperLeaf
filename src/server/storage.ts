@@ -112,7 +112,9 @@ export async function importUpload(request: Request, shelfId: string | null = nu
   }
 }
 export async function drainFileDeletions() {
-  const entries = await db.fileDeletion.findMany();
+  const entries = await db.fileDeletion.findMany({
+    where: { NOT: { path: { startsWith: 'work/' } } },
+  });
   for (const entry of entries) {
     try {
       await rm(safeFilePath(entry.path), { force: true });

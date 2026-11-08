@@ -53,6 +53,12 @@ if (
 ) {
   database.exec(readFileSync('prisma/migrations/20261031090000_word_format/migration.sql', 'utf8'));
 }
+if (!database.prepare("SELECT name FROM sqlite_master WHERE name='WorkDocument'").get()) {
+  database.exec(readFileSync('prisma/migrations/20261107090000_work/migration.sql', 'utf8'));
+}
+if (!database.prepare("SELECT name FROM sqlite_master WHERE name='WorkPreference'").get()) {
+  database.exec(readFileSync('prisma/migrations/20261108160000_work_state/migration.sql', 'utf8'));
+}
 database.close();
 const tsconfig = `.test-data/tsconfig-${mode}.json`;
 writeFileSync(

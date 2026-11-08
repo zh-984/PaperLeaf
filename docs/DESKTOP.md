@@ -4,7 +4,7 @@
 
 ## 安装与打开
 
-1. 从 [GitHub Releases](https://github.com/zh-984/PaperLeaf/releases/latest) 下载 `Paperleaf-Setup-0.8.8-x64.exe`，然后双击运行。
+1. 从 [GitHub Releases](https://github.com/zh-984/PaperLeaf/releases/latest) 下载 `Paperleaf-Setup-0.9.0-x64.exe`，然后双击运行。
 2. 按向导安装到当前用户目录。默认不需要管理员权限。
 3. 双击桌面的 **知页 Paperleaf**，或从开始菜单打开。
 
@@ -19,6 +19,8 @@ Windows x64 安装包中已包含 Chromium、Node 运行时、生产服务、PDF
   ai.env             AI 配置，仅由本地服务读取
   data\library.db    SQLite 数据库
   data\uploads\      PDF 文件
+  data\work\         Work 稿件，DOCX / PDF
+  data\work-detector.env 可选检测器配置
   data\tmp\          上传临时文件
   logs\desktop.log   本地启动与错误日志
 ```
@@ -66,3 +68,7 @@ pnpm test:desktop    # 实际运行 release/win-unpacked/Paperleaf.exe
 自动化回归使用本机模拟服务，不调用用户付费 API。实际第三方模型的效果和可用性取决于所选服务。
 
 安装目录为 `%LOCALAPPDATA%\Programs\Paperleaf`，桌面快捷方式仍为“知页 Paperleaf”。安装器不包含个人文献和 Key。此构建未使用代码签名证书。
+
+## PaperLeaf Work
+
+0.9.0 起，点左上角“知页”右边的三角切换 Read / Work。Work 直接复用已配置的三组 AI 服务，导入 DOCX 或可提取文本的 PDF，点击“开始分析”才发送正文。右侧建议可复制回 Word 手动修改，不导出或改写原文件。公开来源查重可独立使用，不需要 AI Key。详细范围、检测器协议及操作步骤见 [Work 使用说明](WORK.md)。升级会备份已有数据库，并新增 Work 表；Read 文献和配置保留。

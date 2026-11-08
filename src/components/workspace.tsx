@@ -60,7 +60,9 @@ const PdfReader = dynamic(() => import('./continuous-reader').then((module) => m
     </div>
   ),
 });
-export function Workspace() {
+export function Workspace({
+  onModeChange,
+}: { onModeChange?: (mode: 'read' | 'work') => void } = {}) {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [detail, setDetail] = useState<PaperDetail | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -573,6 +575,7 @@ export function Workspace() {
           }}
         />
         <ProjectShelf
+          onModeChange={onModeChange}
           shelves={shelves}
           setShelves={setShelves}
           activeShelfId={activeShelfId}

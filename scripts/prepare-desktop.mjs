@@ -115,7 +115,18 @@ async function copyPackage(
   return localRequire;
 }
 // Materialize exact runtime dependencies instead of copying non-relocatable Windows pnpm junctions.
-for (const name of ['next', 'react', 'react-dom', 'busboy', 'zod', 'dotenv', '@prisma/client'])
+for (const name of [
+  'next',
+  'react',
+  'react-dom',
+  'busboy',
+  'zod',
+  'dotenv',
+  '@prisma/client',
+  'mammoth',
+  'https-proxy-agent',
+  'cheerio',
+])
   await copyPackage(name, require);
 const prismaRequire = createRequire(require.resolve('@prisma/client/package.json'));
 await copyPackage('.prisma/client', prismaRequire);

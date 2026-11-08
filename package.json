@@ -1,6 +1,6 @@
 {
   "name": "paperleaf",
-  "version": "0.8.8",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.25.0",
@@ -25,7 +25,7 @@
     "desktop:prepare": "node scripts/prepare-desktop.mjs",
     "desktop:pack": "pnpm desktop:prepare && node scripts/build-desktop.mjs --dir",
     "desktop:build": "pnpm desktop:prepare && node scripts/build-desktop.mjs",
-    "test:desktop": "node tests/desktop-smoke.mjs",
+    "test:desktop": "node tests/desktop-smoke.mjs && node tests/work-desktop-smoke.mjs",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
   },
   "dependencies": {
@@ -33,10 +33,13 @@
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "busboy": "^1.6.0",
+    "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
+    "https-proxy-agent": "7.0.6",
     "lucide-react": "^0.577.0",
+    "mammoth": "^1.13.0",
     "next": "16.4.3",
     "pdfjs-dist": "6.4.299",
     "react": "19.3.1",

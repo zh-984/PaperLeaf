@@ -4,13 +4,15 @@
 
 中文界面，不需要账号。未配置 AI 时，书架、PDF 阅读、页码记忆和笔记均可独立使用。没有标签系统、BibTeX、云同步或统计追踪。
 
+**0.9.0 新增 PaperLeaf Work**：点左上角品牌旁的三角切换 Read / Work。Work 支持 DOCX / PDF 稿件导入、逐段 AI 表达风险分析、可选专用 AIGC 检测器、公开来源文字比对、定位与复制修改建议。稿件导入后不自动分析，原有 Read 和 Word 引用功能保留。Work 的公开来源覆盖有限，普通大模型分析不是经过验证的 AI 作者身份检测，详见 [Work 使用与验证说明](docs/WORK.md)。
+
 <p align="center">
   <img src="docs/images/readme-home.png" alt="知页 Paperleaf 的首页和文献导入入口" width="66.67%" />
 </p>
 
 ## Windows 桌面版（无需命令行）
 
-1. 打开 [下载页面（GitHub Releases）](https://github.com/zh-984/PaperLeaf/releases/latest)，下载 `Paperleaf-Setup-0.8.8-x64.exe`。
+1. 打开 [下载页面（GitHub Releases）](https://github.com/zh-984/PaperLeaf/releases/latest)，下载 `Paperleaf-Setup-0.9.0-x64.exe`。
 2. 在 Windows x64 电脑上双击安装，按提示完成后打开桌面的 **知页 Paperleaf**。
 3. 导入 PDF 后可直接阅读和记笔记；需要 AI 解读时，在设置中填写自己的 API 地址、Key 和模型名称。
 
@@ -115,6 +117,8 @@ pnpm start
 data/
   library.db       SQLite 数据库
   uploads/         随机 UUID 文件名的 PDF
+  work/            Work 的 DOCX / PDF 原稿，随机 UUID 文件名
+  work-detector.env 可选检测器配置，仅服务端读取
   tmp/             正在上传的临时文件
 public/pdfjs/      安装时复制的 worker / 字体 / CMap / WASM
 ```
@@ -152,6 +156,7 @@ src/app/                    页面、样式、API 路由
 src/components/             书架、报告、PDF 阅读器、追问、自动保存笔记
 src/lib/                    共享类型、Zod 校验、分段、依据校验、Range 解析
 src/server/                 Prisma、本地存储、PDF 提取、报告与追问服务
+src/server/work/            Work 文档解析、公开来源抓取、后台检查和分段缓存
 prisma/schema.prisma        Paper / InsightReport / ChunkCache / Note / AiHistory
 prisma/migrations/          可重复部署的数据库迁移
 scripts/setup.mjs           本地目录、SQLite 空文件、PDF.js 资源准备
@@ -178,6 +183,11 @@ pnpm test:e2e
 
 # 先完成 build 和 e2e，再验证完整生产进程重启后的持久化
 pnpm test:restart
+
+# 可选：真实公开论文网络验证，不发送个人稿件，不调用 AI
+$env:WORK_LIVE_NETWORK='1'
+pnpm exec vitest run tests/work-network.test.ts
+Remove-Item Env:WORK_LIVE_NETWORK
 ```
 
 Vitest 使用 `.test-data/unit/` 独立 SQLite。Playwright 自动启动 3100、3101 两个独立服务，以及 4123 本地模拟 AI；使用 `.test-data/e2e-local/`、`.test-data/e2e-ai/`，不读写正常 `data/`。
