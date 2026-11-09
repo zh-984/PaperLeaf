@@ -62,7 +62,14 @@ const PdfReader = dynamic(() => import('./continuous-reader').then((module) => m
 });
 export function Workspace({
   onModeChange,
-}: { onModeChange?: (mode: 'read' | 'work') => void } = {}) {
+  active = true,
+  onReady,
+}: {
+  onModeChange?: (mode: 'read' | 'work') => void;
+  active?: boolean;
+  onReady?: () => void;
+} = {}) {
+  const initialized = useRef(false);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [detail, setDetail] = useState<PaperDetail | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -111,10 +118,12 @@ export function Workspace({
   );
   const onError = useCallback((message: string) => notify(message), [notify]);
   useEffect(() => {
+    if (!active || loading || !settings) return;
+    if (document.documentElement.dataset.theme === preferences.theme) return;
     document.documentElement.dataset.theme = preferences.theme;
     if (settings?.desktopMode)
       void desktopAction(`theme:${preferences.theme}`).catch(() => undefined);
-  }, [preferences.theme, settings?.desktopMode]);
+  }, [active, loading, preferences.theme, settings]);
   const selectShelf = useCallback((id: string | null) => {
     activeShelfRef.current = id;
     setActiveShelfId(id);
@@ -192,39 +201,52 @@ export function Workspace({
     },
     [notify, selectShelf],
   );
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [list, config, groups, prefs] = await Promise.all([
-        api<Paper[]>('/api/papers'),
-        api<AppSettings>('/api/settings'),
-        api<Bookshelf[]>('/api/bookshelves'),
-        api<AppPreferences>('/api/preferences'),
-      ]);
-      setPapers(list);
-      setSettings(config);
-      setShelves(groups);
-      setPreferences(prefs);
-      preferencesRef.current = prefs;
-      let remembered: string | null = null;
+  const load = useCallback(
+    async (restore = false) => {
+      if (!restore) setLoading(true);
       try {
-        remembered = localStorage.getItem('paperleaf:active');
-      } catch {
-        /* Optional browser hint. */
+        const [list, config, groups, prefs] = await Promise.all([
+          api<Paper[]>('/api/papers'),
+          api<AppSettings>('/api/settings'),
+          api<Bookshelf[]>('/api/bookshelves'),
+          api<AppPreferences>('/api/preferences'),
+        ]);
+        setPapers(list);
+        setSettings(config);
+        setShelves(groups);
+        setPreferences(prefs);
+        preferencesRef.current = prefs;
+        let remembered: string | null = null;
+        try {
+          remembered = localStorage.getItem('paperleaf:active');
+        } catch {
+          /* Optional browser hint. */
+        }
+        const selected = new URLSearchParams(window.location.search).get('paper') || remembered;
+        const initial = list.find((paper) => paper.id === selected) || list[0];
+        if (restore && activeId.current && list.some((p) => p.id === activeId.current)) {
+          setDetail(await api<PaperDetail>(`/api/papers/${activeId.current}`));
+        } else if (initial) await openPaper(initial.id);
+      } catch (cause) {
+        notify(cause instanceof Error ? cause.message : '初始化失败');
+      } finally {
+        setLoading(false);
       }
-      const selected = new URLSearchParams(window.location.search).get('paper') || remembered;
-      const initial = list.find((paper) => paper.id === selected) || list[0];
-      if (initial) await openPaper(initial.id);
-    } catch (cause) {
-      notify(cause instanceof Error ? cause.message : '初始化失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [notify, openPaper]);
+    },
+    [notify, openPaper],
+  );
   useEffect(() => {
-    void load();
-  }, [load]);
+    let live = true;
+    void load(initialized.current).finally(() => {
+      initialized.current = true;
+      if (live) onReady?.();
+    });
+    return () => {
+      live = false;
+    };
+  }, [load, onReady]);
   useEffect(() => {
+    if (!active) return;
     const open = () => openSettings('ai');
     window.addEventListener('paperleaf:open-settings', open);
     window.addEventListener('paperleaf:search', focusSearch);
@@ -240,7 +262,7 @@ export function Workspace({
       window.removeEventListener('paperleaf:search', focusSearch);
       window.removeEventListener('keydown', keyboard);
     };
-  }, [openSettings, focusSearch]);
+  }, [active, openSettings, focusSearch]);
   const detailId = detail?.id;
   const reportStatus = detail?.report?.status;
   useEffect(() => {

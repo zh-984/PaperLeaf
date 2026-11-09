@@ -3747,6 +3747,95 @@ textarea::placeholder {
   margin: 0;
 }
 /* PaperLeaf Work shares the existing theme and runtime. */
+.mode-pane {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.mode-pane[data-current='true'] {
+  visibility: visible;
+  pointer-events: auto;
+}
+.mode-switch-status {
+  position: fixed;
+  bottom: 16px;
+  right: 20px;
+  z-index: 80;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: #000;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 18px #0000000c;
+  pointer-events: none;
+}
+.work-dialog {
+  max-width: 460px;
+  padding: 26px;
+  background: #fff;
+}
+.work-dialog .dialog-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #000;
+  padding-right: 28px;
+}
+.work-dialog .dialog-description {
+  color: #555;
+  line-height: 1.6;
+  margin: 8px 0 20px;
+}
+.work-dialog-document {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: var(--chrome-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.work-dialog-document p {
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.work-dialog-document svg {
+  color: var(--primary);
+  margin-top: 1px;
+}
+.work-dialog-help {
+  font-size: 12px;
+  color: #555;
+  margin-top: 10px;
+  line-height: 1.6;
+}
+.work-dialog .field-label {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.work-dialog .dialog-actions {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 20px;
+  gap: 10px;
+}
+.work-dialog .btn {
+  font-size: 13px;
+  min-height: 38px;
+  padding: 9px 16px;
+}
+.work-dialog .dialog-close {
+  top: 22px;
+  right: 20px;
+}
+.work-dialog-error {
+  color: #9e3028;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 12px;
+}
 .mode-brand {
   position: relative;
   z-index: 30;
@@ -4205,10 +4294,10 @@ textarea::placeholder {
   background: white;
 }
 .work-paragraph {
-  padding: 13px 15px;
+  padding: 8px 12px;
   border: 1px solid transparent;
   border-radius: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   cursor: pointer;
   scroll-margin-top: 15px;
 }
@@ -4230,7 +4319,7 @@ textarea::placeholder {
   line-height: 1.8;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  margin-top: 8px;
+  margin-top: 5px;
 }
 .work-paragraph mark {
   background: #fff0bd;
@@ -4401,6 +4490,55 @@ textarea::placeholder {
   margin-top: 10px;
   font-size: 12px;
   line-height: 1.6;
+}
+.work-local-model {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  padding-top: 10px;
+  font-size: 12px;
+}
+.work-local-model > div {
+  flex: 1;
+  min-width: 220px;
+}
+.work-local-model strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #000;
+  font-size: 13px;
+}
+.work-local-model p {
+  color: #555;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.work-local-model .btn {
+  font-size: 12px;
+  min-height: 32px;
+  padding: 7px 10px;
+}
+.work-local-model progress {
+  width: 100%;
+  height: 5px;
+  accent-color: var(--primary);
+}
+.work-risk.unknown {
+  background: #f0f0f0;
+  color: #555;
+}
+.work-local-ready {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--primary);
+  line-height: 1.5;
 }
 .work-detector-settings summary {
   cursor: pointer;

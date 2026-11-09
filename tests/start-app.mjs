@@ -59,6 +59,9 @@ if (!database.prepare("SELECT name FROM sqlite_master WHERE name='WorkDocument'"
 if (!database.prepare("SELECT name FROM sqlite_master WHERE name='WorkPreference'").get()) {
   database.exec(readFileSync('prisma/migrations/20261108160000_work_state/migration.sql', 'utf8'));
 }
+// A previous interrupted test can leave Work active. Start each isolated server
+// from the same Read baseline; individual tests still verify mode persistence.
+database.exec("UPDATE WorkPreference SET mode='read' WHERE id='local'");
 database.close();
 const tsconfig = `.test-data/tsconfig-${mode}.json`;
 writeFileSync(

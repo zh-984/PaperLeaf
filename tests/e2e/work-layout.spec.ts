@@ -13,7 +13,9 @@ test('Read and Work align their chrome and keep import notices compact as the wi
   };
   const measurements = () =>
     page.evaluate(() => {
-      const shelf = document.querySelector('.project-shelf,.work-shelf')!;
+      const shelf = document.querySelector(
+        '.mode-pane[data-current="true"] .project-shelf,.mode-pane[data-current="true"] .work-shelf',
+      )!;
       const box = (selector: string) => {
         const element = shelf.querySelector(selector)!;
         const r = element.getBoundingClientRect();
@@ -45,7 +47,7 @@ test('Read and Work align their chrome and keep import notices compact as the wi
     await page.setViewportSize({ width, height: 960 });
     await switchMode('Read');
     const read = await measurements();
-    await expect(page.locator('.brand-title')).toHaveText('知页');
+    await expect(page.locator('.brand-title:visible')).toHaveText('知页');
     await switchMode('Work');
     const work = await measurements();
     expect(work.width).toBe(read.width);
@@ -59,7 +61,7 @@ test('Read and Work align their chrome and keep import notices compact as the wi
     expect(work.english).toEqual(read.english);
     expect(work.englishFits).toBe(true);
     expect(work.english.height).toBeCloseTo(work.englishLine, 0);
-    await expect(page.locator('.brand-title')).toHaveText('知页work');
+    await expect(page.locator('.brand-title:visible')).toHaveText('知页work');
   }
   await page.setViewportSize({ width: 1440, height: 960 });
   const uploaded = page.waitForResponse(

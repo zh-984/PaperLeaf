@@ -45,10 +45,10 @@ export function WorkDetectorSettings({
         if (event.currentTarget.open) void load();
       }}
     >
-      <summary>专用检测器接入（可选）</summary>
+      <summary>外部检测服务（高级，可选）</summary>
       <p>
-        已有聊天 API
-        可直接用于辅助分析。此处用于连接你自己的真实检测器服务（可在本机运行），不附带订阅或模型下载。
+        一般使用本地中文检测即可，无需填写下方内容。已有独立检测服务时，才在这里配置其地址和
+        Key；普通聊天 API 请在“AI 配置”中填写。
       </p>
       <form
         onSubmit={(event) => {

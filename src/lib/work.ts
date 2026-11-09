@@ -9,11 +9,19 @@ export interface WorkFinding {
   quote: string;
   start: number;
   end: number;
-  risk: 'high' | 'medium' | 'low';
+  risk: 'high' | 'medium' | 'low' | 'unknown';
   reason: string;
   suggestion: string;
   revision: string;
   score?: number;
+}
+export interface LocalDetectorState {
+  ready: boolean;
+  status: 'missing' | 'downloading' | 'ready' | 'error';
+  downloadedBytes: number;
+  totalBytes: number;
+  model: string;
+  error: string;
 }
 export interface WorkMatch {
   paragraphId: string;

@@ -4,7 +4,7 @@
 
 中文界面，不需要账号。未配置 AI 时，书架、PDF 阅读、页码记忆和笔记均可独立使用。没有标签系统、BibTeX、云同步或统计追踪。
 
-**0.9.0 新增 PaperLeaf Work**：点左上角品牌旁的三角切换 Read / Work。Work 支持 DOCX / PDF 稿件导入、逐段 AI 表达风险分析、可选专用 AIGC 检测器、公开来源文字比对、定位与复制修改建议。稿件导入后不自动分析，原有 Read 和 Word 引用功能保留。Work 的公开来源覆盖有限，普通大模型分析不是经过验证的 AI 作者身份检测，详见 [Work 使用与验证说明](docs/WORK.md)。
+**PaperLeaf Work**：点左上角品牌旁的三角切换 Read / Work。Work 支持 DOCX / PDF 稿件导入、逐段 AI 表达风险分析、公开来源文字比对、定位与复制修改建议。**0.9.2 新增本地中文 AIGC 专用检测：首次一键下载约 99 MiB 模型，之后离线运行，无需 Key。** 同时优化模式切换、正文间距和稿件弹窗。稿件导入后不自动分析，原有 Read 和 Word 引用功能保留。检测分数不等于真实 AI 作者身份占比，详见 [本地检测说明](docs/LOCAL-DETECTOR.md) 和 [Work 使用与验证说明](docs/WORK.md)。
 
 <p align="center">
   <img src="docs/images/readme-home.png" alt="知页 Paperleaf 的首页和文献导入入口" width="66.67%" />
@@ -12,7 +12,7 @@
 
 ## Windows 桌面版（无需命令行）
 
-1. 打开 [下载页面（GitHub Releases）](https://github.com/zh-984/PaperLeaf/releases/latest)，下载 `Paperleaf-Setup-0.9.1-x64.exe`。
+1. 打开 [下载页面（GitHub Releases）](https://github.com/zh-984/PaperLeaf/releases/latest)，下载 `Paperleaf-Setup-0.9.2-x64.exe`。
 2. 在 Windows x64 电脑上双击安装，按提示完成后打开桌面的 **知页 Paperleaf**。
 3. 导入 PDF 后可直接阅读和记笔记；需要 AI 解读时，在设置中填写自己的 API 地址、Key 和模型名称。
 
@@ -118,6 +118,7 @@ data/
   library.db       SQLite 数据库
   uploads/         随机 UUID 文件名的 PDF
   work/            Work 的 DOCX / PDF 原稿，随机 UUID 文件名
+  models/aigc-zh-v3/ 可选本地中文检测模型，首次一键下载
   work-detector.env 可选检测器配置，仅服务端读取
   tmp/             正在上传的临时文件
 public/pdfjs/      安装时复制的 worker / 字体 / CMap / WASM

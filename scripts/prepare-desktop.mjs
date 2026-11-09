@@ -93,6 +93,10 @@ async function copyPackage(
     dereference: true,
     filter(source) {
       const base = path.basename(source);
+      const relative = path.relative(packageRoot, source).replaceAll('\\', '/');
+      // Ship only the supported Windows x64 runtime, not every platform's binaries.
+      if (name === 'onnxruntime-node' && relative.startsWith('bin/napi-v6/'))
+        return relative === 'bin/napi-v6/win32' || relative.startsWith('bin/napi-v6/win32/x64');
       return (
         source === packageRoot ||
         (base !== 'node_modules' && base !== '.env' && !base.startsWith('.env.'))
@@ -126,6 +130,8 @@ for (const name of [
   'mammoth',
   'https-proxy-agent',
   'cheerio',
+  'onnxruntime-node',
+  '@huggingface/tokenizers',
 ])
   await copyPackage(name, require);
 const prismaRequire = createRequire(require.resolve('@prisma/client/package.json'));

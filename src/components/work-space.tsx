@@ -16,7 +16,12 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { defaultPreferences, type AppPreferences, type AppSettings } from '@/lib/types';
-import { mergeRanges, type WorkDocument, type WorkFinding } from '@/lib/work';
+import {
+  mergeRanges,
+  type WorkDocument,
+  type WorkFinding,
+  type LocalDetectorState,
+} from '@/lib/work';
 import { fileSize, dateLabel } from '@/lib/utils';
 import { ModeBrand } from './mode-brand';
 import { Button } from './ui/button';
@@ -25,9 +30,10 @@ import { SettingsWindow } from './settings-window';
 import { DesktopTitlebar } from './desktop-titlebar';
 import { desktopAction } from '@/lib/desktop';
 import { WorkDetectorSettings } from './work-detector-settings';
+import { WorkLocalDetector } from './work-local-detector';
 
 type Summary = Pick<WorkDocument, 'id' | 'title' | 'fileName' | 'fileSize' | 'createdAt'>;
-const labels = { high: '重点核对', medium: '建议检查', low: '低表达风险' };
+const labels = { high: '重点核对', medium: '建议检查', low: '低表达风险', unknown: '信息不足' };
 function Highlight({ text, ranges }: { text: string; ranges: { start: number; end: number }[] }) {
   const merged = mergeRanges(ranges);
   let offset = 0;
@@ -42,7 +48,16 @@ function Highlight({ text, ranges }: { text: string; ranges: { start: number; en
   parts.push(text.slice(offset));
   return <>{parts}</>;
 }
-export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'work') => void }) {
+export function WorkSpace({
+  onModeChange,
+  active = true,
+  onReady,
+}: {
+  onModeChange: (mode: 'read' | 'work') => void;
+  active?: boolean;
+  onReady?: () => void;
+}) {
+  const initialized = useRef(false);
   const [items, setItems] = useState<Summary[]>([]),
     [doc, setDoc] = useState<WorkDocument | null>(null),
     [activeId, setActiveId] = useState('');
@@ -56,7 +71,8 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
     [settingsSection, setSettingsSection] = useState('ai');
   const [kind, setKind] = useState<'aigc' | 'similarity'>('aigc'),
     [slot, setSlot] = useState(1),
-    [engine, setEngine] = useState<'assistant' | 'detector'>('assistant');
+    [engine, setEngine] = useState<'assistant' | 'detector' | 'local'>('assistant');
+  const [local, setLocal] = useState<LocalDetectorState | null>(null);
   const [detector, setDetector] = useState(false),
     [busy, setBusy] = useState(false),
     [uploading, setUploading] = useState(false),
@@ -81,6 +97,9 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
     const detail = await api<WorkDocument>(`/api/work/${id}`);
     if (activeRef.current === id && current === revision.current) setDoc(detail);
     return detail;
+  }, []);
+  const invalidateLoad = useCallback(() => {
+    revision.current++;
   }, []);
   const select = useCallback(
     async (id: string) => {
@@ -111,30 +130,39 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
       api<Summary[]>('/api/work'),
       api<AppSettings>('/api/settings'),
       api<AppPreferences>('/api/preferences'),
-      api<{ detector: boolean }>('/api/work/capabilities'),
+      api<{ detector: boolean; local: LocalDetectorState }>('/api/work/capabilities'),
       api<{ documentId: string }>('/api/work/state'),
     ])
-      .then(([list, config, prefs, capabilities, workState]) => {
+      .then(async ([list, config, prefs, capabilities, workState]) => {
         if (!live) return;
         setItems(list);
         setSettings(config);
         setPreferences(prefs);
         setDetector(capabilities.detector);
+        setLocal(capabilities.local);
+        if (!initialized.current && capabilities.local.ready) setEngine('local');
         const remembered = workState.documentId || localStorage.getItem('paperleaf-work-active');
         const first = list.find((item) => item.id === remembered) || list[0];
-        if (first) void select(first.id);
+        if (first) {
+          if (initialized.current && first.id === activeRef.current) await loadDoc(first.id);
+          else await select(first.id);
+        }
       })
       .catch((cause) => {
         if (live) setError(cause instanceof Error ? cause.message : '加载失败');
       })
       .finally(() => {
-        if (live) setLoading(false);
+        initialized.current = true;
+        if (live) {
+          setLoading(false);
+          onReady?.();
+        }
       });
     return () => {
       live = false;
-      activeRef.current = '';
+      invalidateLoad();
     };
-  }, [select]);
+  }, [select, loadDoc, onReady, invalidateLoad]);
   const running = doc?.tasks.find((task) => task.status === 'running');
   useEffect(() => {
     if (!running || !activeId) return;
@@ -144,11 +172,14 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
     return () => clearInterval(timer);
   }, [activeId, running, loadDoc]);
   useEffect(() => {
+    if (!active || loading || !settings) return;
+    if (document.documentElement.dataset.theme === preferences.theme) return;
     document.documentElement.dataset.theme = preferences.theme;
     if (settings?.desktopMode)
       void desktopAction(`theme:${preferences.theme}`).catch(() => undefined);
-  }, [preferences.theme, settings?.desktopMode]);
+  }, [active, loading, preferences.theme, settings]);
   useEffect(() => {
+    if (!active) return;
     const keyboard = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') {
         event.preventDefault();
@@ -157,7 +188,7 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
     };
     window.addEventListener('keydown', keyboard);
     return () => window.removeEventListener('keydown', keyboard);
-  }, []);
+  }, [active]);
   async function upload(files: FileList | File[] | null) {
     if (!files || uploading) return;
     setUploading(true);
@@ -240,7 +271,7 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
   const matches = task?.results.matches || [];
   const focus =
     selectedParagraph ||
-    findings.find((f) => f.risk !== 'low')?.paragraphId ||
+    findings.find((f) => f.risk === 'high' || f.risk === 'medium')?.paragraphId ||
     matches[0]?.paragraphId ||
     '';
   const finding = findings.find((f) => f.paragraphId === focus);
@@ -248,6 +279,7 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
     setSettingsSection(section);
     setSettingsOpen(true);
   };
+  const enableLocal = useCallback(() => setEngine('local'), []);
   return (
     <>
       {settings?.desktopMode && (
@@ -364,6 +396,7 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
                     title="重命名稿件"
                     onClick={() => {
                       setNewTitle(doc.title);
+                      setError('');
                       setRenaming(true);
                     }}
                   >
@@ -372,7 +405,10 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
                   <button
                     title="删除稿件"
                     aria-label="删除 Work 稿件"
-                    onClick={() => setDeleting(true)}
+                    onClick={() => {
+                      setError('');
+                      setDeleting(true);
+                    }}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -459,9 +495,10 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
                           onChange={(event) => setEngine(event.target.value as typeof engine)}
                         >
                           <option value="assistant">AI 辅助分析</option>
-                          <option value="detector" disabled={!detector}>
-                            专用检测器{!detector ? '（未配置）' : ''}
+                          <option value="local">
+                            本地中文专用检测{!local?.ready ? '（先下载模型）' : ''}
                           </option>
+                          {detector && <option value="detector">外部专用检测器</option>}
                         </select>
                       </label>
                       {engine === 'assistant' && (
@@ -520,7 +557,12 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
                     />
                     排除参考文献章节
                   </label>
-                  <Button disabled={busy || !!running} onClick={() => void start()}>
+                  <Button
+                    disabled={
+                      busy || !!running || (kind === 'aigc' && engine === 'local' && !local?.ready)
+                    }
+                    onClick={() => void start()}
+                  >
                     {busy ? <LoaderCircle size={16} className="spin" /> : null}
                     {task?.status === 'failed' || task?.status === 'cancelled'
                       ? '继续检查'
@@ -559,19 +601,29 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
                   {kind === 'aigc'
                     ? engine === 'assistant'
                       ? `手动开始后，正文分段发送至 ${config?.host || settings?.aiHost || '所选 API 服务'}。这是表达风险分析，不证明作者身份，不生成虚构的 AI 率。`
-                      : '手动开始后正文发送至你配置的专用检测器，结果仅供人工核对。'
+                      : engine === 'local'
+                        ? '正文只在本机 CPU 推理，不发送到 AI 服务；整段评分仅供人工核对。'
+                        : '手动开始后正文发送至你配置的专用检测器，结果仅供人工核对。'
                     : `检索词发送至 Europe PMC / arXiv，仅统计取得正文的来源。${discover ? '自动尝试读取最多 4 个候选全文。' : '仅比对已经取得的来源。'}不覆盖全网或知网。`}
                 </p>
                 {kind === 'aigc' && (
-                  <WorkDetectorSettings
-                    disabled={!!running || busy}
-                    onError={setError}
-                    onSaved={(enabled) => {
-                      setDetector(enabled);
-                      if (!enabled) setEngine('assistant');
-                      setNotice('专用检测器配置已保存到本机');
-                    }}
-                  />
+                  <>
+                    <WorkLocalDetector
+                      state={local}
+                      onChange={setLocal}
+                      onError={setError}
+                      onReady={enableLocal}
+                    />
+                    <WorkDetectorSettings
+                      disabled={!!running || busy}
+                      onError={setError}
+                      onSaved={(enabled) => {
+                        setDetector(enabled);
+                        if (!enabled) setEngine('assistant');
+                        setNotice('专用检测器配置已保存到本机');
+                      }}
+                    />
+                  </>
                 )}
                 {kind === 'similarity' && sourcesOpen && (
                   <div className="work-sources">
@@ -703,7 +755,7 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
                   {doc.paragraphs.map((paragraph) => {
                     const risk = findings.find((f) => f.paragraphId === paragraph.id);
                     const ranges =
-                      kind === 'aigc' && risk && risk.risk !== 'low'
+                      kind === 'aigc' && risk && (risk.risk === 'high' || risk.risk === 'medium')
                         ? [risk]
                         : kind === 'similarity'
                           ? matches.filter((m) => m.paragraphId === paragraph.id)
@@ -832,59 +884,107 @@ export function WorkSpace({ onModeChange }: { onModeChange: (mode: 'read' | 'wor
         />
         <Dialog
           open={deleting}
-          onOpenChange={setDeleting}
-          title="删除 Work 稿件"
-          description="将删除本地原文件、报告、缓存和已取得的来源。"
+          onOpenChange={(value) => {
+            if (!busy) setDeleting(value);
+          }}
+          title="删除稿件"
+          description="将移除这份稿件的本地文件、检查报告、缓存和来源。"
+          className="work-dialog"
         >
-          <p>{doc?.title}</p>
-          <Button
-            disabled={busy}
-            onClick={() =>
-              void action(async () => {
-                if (!doc) return;
-                await api(`/api/work/${doc.id}`, { method: 'DELETE' });
-                const remaining = items.filter((item) => item.id !== doc.id);
-                setItems(remaining);
-                setDoc(null);
-                activeRef.current = '';
-                setActiveId('');
-                setDeleting(false);
-                if (remaining[0]) await select(remaining[0].id);
-              })
-            }
-          >
-            确认删除稿件
-          </Button>
+          <div className="work-dialog-document">
+            <FileText size={20} />
+            <p>{doc?.title}</p>
+          </div>
+          <p className="work-dialog-help">删除后无法撤销，其他稿件不会受影响。</p>
+          {error && (
+            <p role="alert" className="work-dialog-error">
+              {error}
+            </p>
+          )}
+          <div className="dialog-actions">
+            <Button variant="secondary" disabled={busy} onClick={() => setDeleting(false)}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={busy}
+              onClick={() =>
+                void action(async () => {
+                  if (!doc) return;
+                  await api(`/api/work/${doc.id}`, { method: 'DELETE' });
+                  const remaining = items.filter((item) => item.id !== doc.id);
+                  setItems(remaining);
+                  setDoc(null);
+                  activeRef.current = '';
+                  setActiveId('');
+                  setDeleting(false);
+                  if (remaining[0]) await select(remaining[0].id);
+                })
+              }
+            >
+              确认删除稿件
+            </Button>
+          </div>
         </Dialog>
-        <Dialog open={renaming} onOpenChange={setRenaming} title="重命名稿件">
-          <label>
-            稿件标题
-            <input
-              className="text-input"
-              value={newTitle}
-              maxLength={300}
-              onChange={(event) => setNewTitle(event.target.value)}
-            />
-          </label>
-          <Button
-            disabled={busy || !newTitle.trim()}
-            onClick={() =>
+        <Dialog
+          open={renaming}
+          onOpenChange={(value) => {
+            if (!busy) setRenaming(value);
+          }}
+          title="重命名稿件"
+          description="修改知页中显示的标题，原始文件名保持不变。"
+          className="work-dialog"
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (busy || !newTitle.trim()) return;
               void action(async () => {
                 if (!doc) return;
+                const title = newTitle.trim();
                 await api(`/api/work/${doc.id}`, {
                   method: 'PATCH',
-                  body: JSON.stringify({ title: newTitle }),
+                  body: JSON.stringify({ title }),
                 });
                 setItems((current) =>
-                  current.map((item) => (item.id === doc.id ? { ...item, title: newTitle } : item)),
+                  current.map((item) => (item.id === doc.id ? { ...item, title } : item)),
                 );
                 await loadDoc(doc.id);
                 setRenaming(false);
-              })
-            }
+              });
+            }}
           >
-            保存标题
-          </Button>
+            <label className="field-label" htmlFor="work-rename-title">
+              稿件标题
+            </label>
+            <input
+              id="work-rename-title"
+              className="text-input"
+              value={newTitle}
+              required
+              disabled={busy}
+              maxLength={300}
+              onChange={(event) => setNewTitle(event.target.value)}
+            />
+            {error && (
+              <p role="alert" className="work-dialog-error">
+                {error}
+              </p>
+            )}
+            <div className="dialog-actions">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => setRenaming(false)}
+              >
+                取消
+              </Button>
+              <Button type="submit" disabled={busy || !newTitle.trim()}>
+                保存标题
+              </Button>
+            </div>
+          </form>
         </Dialog>
       </div>
     </>

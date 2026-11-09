@@ -7,6 +7,7 @@ import { drainWorkFiles, importWork, requireWork } from '@/server/work/documents
 import { beginWork, cancelWork, recoverWork, workTaskInput } from '@/server/work/tasks';
 import { addSource, discoverSources } from '@/server/work/sources';
 import { detectorDto, detectorSettingsSchema, saveWorkDetector } from '@/server/work/detector';
+import { localDetectorState, startLocalInstall } from '@/server/work/local-detector';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ path?: string[] }> };
@@ -37,8 +38,21 @@ export async function workHandler(request: Request, context: Context): Promise<R
     if (id === 'capabilities' && method === 'GET')
       return Response.json({
         ...detectorDto(),
+        local: localDetectorState(),
         sources: 'Europe PMC / arXiv + 用户补充公开链接',
       });
+    if (id === 'local-detector') {
+      if (method === 'GET') return Response.json(localDetectorState());
+      if (method === 'POST') {
+        const { force } = z
+          .object({ force: z.boolean().default(false) })
+          .strict()
+          .parse(await jsonBody(request));
+        const install = startLocalInstall(force);
+        after(install.run);
+        return Response.json(install.state, { status: 202 });
+      }
+    }
     if (id === 'state') {
       if (method === 'GET')
         return Response.json(

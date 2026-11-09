@@ -10,6 +10,8 @@ allowBuilds:
   unrs-resolver: true
   electron: true
   electron-winstaller: false
+  # CPU binaries are bundled. Do not download optional CUDA libraries.
+  onnxruntime-node: false
 minimumReleaseAgeExclude:
   - '@next/env@16.4.3'
   - '@next/eslint-plugin-next@16.4.3'

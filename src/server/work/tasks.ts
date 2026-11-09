@@ -8,6 +8,12 @@ import { requireWork } from './documents';
 import { addSource, discoverSources } from './sources';
 import { getWorkDetector } from './detector';
 import {
+  localDetectorState,
+  LOCAL_MODEL_NAME,
+  LOCAL_MODEL_REVISION,
+  localFindings,
+} from './local-detector';
+import {
   calculateSimilarity,
   createLiteralMatcher,
   isReferenceParagraph,
@@ -26,7 +32,7 @@ export const workTaskInput = z.object({
   excludeReferences: z.boolean().default(true),
   discover: z.boolean().default(true),
   query: z.string().trim().max(250).default(''),
-  engine: z.enum(['assistant', 'detector']).default('assistant'),
+  engine: z.enum(['assistant', 'detector', 'local']).default('assistant'),
 });
 type Input = z.infer<typeof workTaskInput>;
 const modelResult = z.object({
@@ -94,6 +100,8 @@ export async function beginWork(documentId: string, input: Input) {
     throw new ApiError(503, '未配置 AI，请在设置与隐私中填写 API 地址、Key 和模型');
   if (input.kind === 'aigc' && input.engine === 'detector' && !getWorkDetector().url)
     throw new ApiError(503, '未配置专用检测器接口，仍可选择 AI 辅助分析');
+  if (input.kind === 'aigc' && input.engine === 'local' && !localDetectorState().ready)
+    throw new ApiError(503, '本地检测模型尚未准备好，请先下载');
   const task = await db.workTask.create({
     data: {
       documentId,
@@ -136,7 +144,12 @@ async function runWork(
         checkedParagraphs: 0,
         totalParagraphs: included.length,
         engine: input.engine,
-        model: input.engine === 'assistant' ? config.model : detectorConfig.model || '专用检测器',
+        model:
+          input.engine === 'local'
+            ? LOCAL_MODEL_NAME
+            : input.engine === 'assistant'
+              ? config.model
+              : detectorConfig.model || '专用检测器',
         warnings:
           input.engine === 'assistant'
             ? ['AI 辅助分析是表达风险判断，不证明作者身份，也不输出真实 AI 写作比例。']
@@ -152,17 +165,19 @@ async function runWork(
           next: included[index + 3]?.text.slice(0, 400) || '',
         };
         const cacheKey = digest(
-          'work-analysis-v2' +
-            JSON.stringify({
-              context,
-              engine: input.engine,
-              model: config.model,
-              base: config.baseUrl,
-              key: config.apiKey,
-              detectorUrl,
-              detectorKey,
-              detectorModel: detectorConfig.model,
-            }),
+          input.engine === 'local'
+            ? 'work-local-v1' + JSON.stringify({ context, revision: LOCAL_MODEL_REVISION })
+            : 'work-analysis-v2' +
+                JSON.stringify({
+                  context,
+                  engine: input.engine,
+                  model: config.model,
+                  base: config.baseUrl,
+                  key: config.apiKey,
+                  detectorUrl,
+                  detectorKey,
+                  detectorModel: detectorConfig.model,
+                }),
         );
         const cached =
           !input.force &&
@@ -171,7 +186,9 @@ async function runWork(
           }));
         let findings: WorkFinding[];
         if (cached) findings = JSON.parse(cached.content) as WorkFinding[];
-        else if (input.engine === 'assistant') {
+        else if (input.engine === 'local') {
+          findings = await localFindings(group, signal);
+        } else if (input.engine === 'assistant') {
           const answer = await completion(
             [
               {

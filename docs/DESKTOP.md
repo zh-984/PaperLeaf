@@ -4,7 +4,7 @@
 
 ## 安装与打开
 
-1. 从 [GitHub Releases](https://github.com/zh-984/PaperLeaf/releases/latest) 下载 `Paperleaf-Setup-0.9.1-x64.exe`，然后双击运行。
+1. 从 [GitHub Releases](https://github.com/zh-984/PaperLeaf/releases/latest) 下载 `Paperleaf-Setup-0.9.2-x64.exe`，然后双击运行。
 2. 按向导安装到当前用户目录。默认不需要管理员权限。
 3. 双击桌面的 **知页 Paperleaf**，或从开始菜单打开。
 
@@ -20,6 +20,7 @@ Windows x64 安装包中已包含 Chromium、Node 运行时、生产服务、PDF
   data\library.db    SQLite 数据库
   data\uploads\      PDF 文件
   data\work\         Work 稿件，DOCX / PDF
+  data\models\aigc-zh-v3\ 可选本地中文检测模型
   data\work-detector.env 可选检测器配置
   data\tmp\          上传临时文件
   logs\desktop.log   本地启动与错误日志
@@ -74,3 +75,7 @@ pnpm test:desktop    # 实际运行 release/win-unpacked/Paperleaf.exe
 ## PaperLeaf Work
 
 0.9.0 起，点左上角“知页”右边的三角切换 Read / Work。Work 直接复用已配置的三组 AI 服务，导入 DOCX 或可提取文本的 PDF，点击“开始分析”才发送正文。右侧建议可复制回 Word 手动修改，不导出或改写原文件。公开来源查重可独立使用，不需要 AI Key。详细范围、检测器协议及操作步骤见 [Work 使用说明](WORK.md)。升级会备份已有数据库，并新增 Work 表；Read 文献和配置保留。
+
+0.9.2 起，可在 Work 选择“本地中文专用检测”，点击“下载并启用”。模型约 99 MiB，下载校验通过后在 CPU 离线运行，无需 API Key，不发送稿件。升级保留已下载模型；未下载或下载失败时仍可使用原有 API 辅助分析。英文和过短段落不强行评分，真实模型分数也不能证明作者身份。详见 [本地检测说明](LOCAL-DETECTOR.md)。
+
+Read / Work 切换时先在后台准备新工作区，再显示；保留已访问工作区的页面状态和搜索，避免整屏加载空白及主题闪回。隐藏工作区暂停订阅与界面副作用。Work 正文段间距收紧，删除和重命名弹窗使用统一的标题、内容区和按钮区。
