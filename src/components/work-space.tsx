@@ -32,6 +32,8 @@ import { desktopAction } from '@/lib/desktop';
 import { WorkDetectorSettings } from './work-detector-settings';
 import { WorkLocalDetector } from './work-local-detector';
 import { UpdateBadge } from './app-updates';
+import { WorkHistory, workHistoryLabel } from './work-history';
+import type { WorkTask } from '@/lib/work';
 
 type Summary = Pick<WorkDocument, 'id' | 'title' | 'fileName' | 'fileSize' | 'createdAt'>;
 const labels = { high: '重点核对', medium: '建议检查', low: '低表达风险', unknown: '信息不足' };
@@ -90,6 +92,7 @@ export function WorkSpace({
     [deleting, setDeleting] = useState(false),
     [renaming, setRenaming] = useState(false),
     [newTitle, setNewTitle] = useState('');
+  const [deleteHistory, setDeleteHistory] = useState<WorkTask | null>(null);
   const [reportDetails, setReportDetails] = useState<'sources' | 'scope' | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false),
     [dragging, setDragging] = useState(false),
@@ -582,7 +585,7 @@ export function WorkSpace({
                           ? '开始分析'
                           : '开始查重'}
                   </Button>
-                  {running && (
+                  {running?.kind === kind && (
                     <Button
                       variant="secondary"
                       disabled={busy}
@@ -733,39 +736,26 @@ export function WorkSpace({
                   )}
                 </div>
                 <p aria-live="polite">
-                  {running && <LoaderCircle size={15} className="spin" />}
-                  {task?.progress || '导入后不会自动开始检查'}
+                  {task?.status === 'running' && <LoaderCircle size={15} className="spin" />}
+                  {task?.progress ||
+                    (running && running.kind !== kind
+                      ? '另一项检查正在进行，本项尚未开始'
+                      : '导入后不会自动开始检查')}
                   {task && (
                     <small>
                       {task.results.model || `${task.results.totalParagraphs ?? 0} 段正文`}
                     </small>
                   )}
                 </p>
-                {doc.tasks.filter((item) => item.kind === kind).length > 1 && (
-                  <label>
-                    历史记录
-                    <select
-                      aria-label="选择 Work 检查记录"
-                      value={task?.id || ''}
-                      onChange={(event) => setPickedTask(event.target.value)}
-                    >
-                      {doc.tasks
-                        .filter((item) => item.kind === kind)
-                        .map((item) => (
-                          <option value={item.id} key={item.id}>
-                            {new Date(item.createdAt).toLocaleString('zh-CN')} ·{' '}
-                            {item.status === 'complete'
-                              ? '完成'
-                              : item.status === 'failed'
-                                ? '失败'
-                                : item.status === 'running'
-                                  ? '进行中'
-                                  : '已取消'}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                )}
+                <WorkHistory
+                  tasks={doc.tasks.filter((item) => item.kind === kind)}
+                  selected={task?.id}
+                  onSelect={(id) => {
+                    setPickedTask(id);
+                    setSelectedParagraph('');
+                  }}
+                  onDelete={setDeleteHistory}
+                />
               </section>
               {task?.error && <div className="work-alert">{task.error}</div>}
               {(!!task?.results.discovery || !!task?.results.warnings?.length) && (
@@ -915,6 +905,41 @@ export function WorkSpace({
           onUpload={() => input.current?.click()}
           onError={setError}
         />
+        <Dialog
+          open={!!deleteHistory}
+          onOpenChange={(value) => {
+            if (!value && !busy) setDeleteHistory(null);
+          }}
+          title="删除历史记录和报告？"
+          description="将永久删除该次检查记录和对应报告。原稿、其他报告、公开来源及可复用缓存保留。"
+        >
+          <p className="work-history-delete-label">
+            {deleteHistory && workHistoryLabel(deleteHistory)}
+          </p>
+          <div className="dialog-actions">
+            <Button variant="secondary" disabled={busy} onClick={() => setDeleteHistory(null)}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={busy}
+              onClick={() =>
+                void action(async () => {
+                  if (!doc || !deleteHistory) return;
+                  await api('/api/work/' + doc.id + '/tasks/' + deleteHistory.id + '?remove=true', {
+                    method: 'DELETE',
+                  });
+                  setPickedTask('');
+                  setSelectedParagraph('');
+                  setDeleteHistory(null);
+                  await loadDoc(doc.id);
+                })
+              }
+            >
+              确认删除记录和报告
+            </Button>
+          </div>
+        </Dialog>
         <Dialog
           open={!!reportDetails}
           onOpenChange={(value) => {

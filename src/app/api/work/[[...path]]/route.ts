@@ -89,7 +89,7 @@ export async function workHandler(request: Request, context: Context): Promise<R
         await recoverWork(id);
         const doc = await db.workDocument.findUniqueOrThrow({
           where: { id },
-          include: { tasks: { orderBy: { createdAt: 'desc' }, take: 20 }, sources: true },
+          include: { tasks: { orderBy: { createdAt: 'desc' } }, sources: true },
         });
         const { paragraphsJson, tasks, sources, filePath, hash, ...rest } = doc;
         void filePath;
@@ -145,6 +145,14 @@ export async function workHandler(request: Request, context: Context): Promise<R
         idSchema.parse(child);
         const task = await db.workTask.findFirst({ where: { id: child, documentId: id } });
         if (!task) throw new ApiError(404, '任务不存在');
+        if (new URL(request.url).searchParams.get('remove') === 'true') {
+          if (task.status === 'running')
+            throw new ApiError(409, '请先取消正在进行的任务，再删除历史记录');
+          await db.workTask.deleteMany({
+            where: { id: child, documentId: id, status: { not: 'running' } },
+          });
+          return Response.json({ ok: true });
+        }
         cancelWork(child);
         await db.workTask.updateMany({
           where: { id: child, status: 'running' },

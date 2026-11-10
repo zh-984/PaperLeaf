@@ -21,6 +21,7 @@ const sections = [
   ['general', '常规', Settings2, '导入 自动解读 默认页面'],
   ['files', '文件与存储', FileText, '导入 PDF 数据目录 备份'],
   ['ai', 'AI 配置', Sparkles, 'API Key 模型 服务'],
+  ['work', 'Work 检查', FileText, 'AIGC 中文专用检测 查重 历史 报告 删除 缓存'],
   ['reading', '阅读与外观', BookOpen, '主题 颜色 宽度 动画 缩放'],
   ['privacy', '隐私与提示', ShieldCheck, '隐私 提示条 全文 图像'],
   ['about', '快捷键与关于', CircleHelp, '帮助 日志 版本'],
@@ -220,6 +221,40 @@ export function SettingsWindow({
                 </p>
               </>
             )}
+            {section === 'work' && (
+              <>
+                <p className="settings-lead">
+                  导入 DOCX / PDF 后手动开始检查。AIGC 与公开来源查重分别显示各自的进度和历史。
+                </p>
+                <div className="settings-card privacy-details">
+                  <h3>三种检测方式</h3>
+                  <p>
+                    中文专用检测在本机 CPU 运行，无需
+                    Key，首次下载模型后离线使用。短段和不适用语言可能显示信息不足。
+                  </p>
+                  <p>
+                    AI 辅助分析使用 AI
+                    配置中的服务，发送待分析正文及少量上下文，给出表达风险和修改建议；外部专用检测使用你另行配置的检测接口。模型评分不证明作者身份。
+                  </p>
+                </div>
+                <div className="settings-card privacy-details">
+                  <h3>公开来源查重</h3>
+                  <p>
+                    只将检索词或标题发送到 Europe PMC / OpenAlex /
+                    arXiv；取得正文后在本机比对。来源可能无法访问，结果只代表已取得来源，不是全网或知网查重率。没有来源时显示未计算。
+                  </p>
+                </div>
+                <div className="settings-card privacy-details">
+                  <h3>历史、报告与重试</h3>
+                  <p>
+                    历史显示检测方式、模型、时间和状态，列表最多同时显示六条，其余在列表内滚动查看。删除历史前会确认，并一起删除该次报告，保留原稿、其他报告与成功缓存。
+                  </p>
+                  <p>
+                    继续检查会复用成功缓存；重新分析会再次调用服务。格式异常最多补请求一次，连续两批完全无效即停止追加请求，避免反复消耗用量。
+                  </p>
+                </div>
+              </>
+            )}
             {section === 'reading' && (
               <>
                 <p className="settings-lead">保持阅读区简洁，把更多空间留给原文。</p>
@@ -300,6 +335,11 @@ export function SettingsWindow({
                 </div>
                 <div className="settings-card privacy-details">
                   <h3>什么时候会发送内容？</h3>
+                  <p>
+                    Work 本地中文检测不发送正文；AI
+                    辅助分析和外部检测需发送正文到所选服务。公开来源查重发送标题或检索词，不发送稿件正文。更新检查只读取
+                    GitHub 版本信息。
+                  </p>
                   <p>
                     生成报告时会发送全文文字，视觉模型还会接收页面图像；追问会发送当前页、选区及有限的对话历史。内容只发往你配置的
                     AI 服务，图像、推理和回答会产生用量。
