@@ -12,7 +12,7 @@
 
 ## Windows 桌面版（无需命令行）
 
-1. 打开 [下载页面（GitHub Releases）](https://github.com/zh-984/PaperLeaf/releases/latest)，下载 `Paperleaf-Setup-0.9.5-x64.exe`。
+1. 打开 [下载页面（GitHub Releases）](https://github.com/zh-984/PaperLeaf/releases/latest)，下载 `Paperleaf-Setup-0.9.6-x64.exe`。
 2. 在 Windows x64 电脑上双击安装，按提示完成后打开桌面的 **知页 Paperleaf**。
 3. 导入 PDF 后可直接阅读和记笔记；需要 AI 解读时，在设置中填写自己的 API 地址、Key 和模型名称。
 

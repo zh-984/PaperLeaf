@@ -48,6 +48,12 @@ test('history identifies methods, scrolls after six rows, confirms deletion and 
       .evaluate((el) => ({ height: el.clientHeight, scroll: el.scrollHeight }));
     expect(size.height).toBeLessThanOrEqual(312);
     expect(size.scroll).toBeGreaterThan(size.height);
+    expect((await page.getByLabel('Work 历史记录列表').boundingBox())!.width).toBeLessThanOrEqual(
+      342,
+    );
+    expect((await page.locator('.work-history summary').boundingBox())!.width).toBeLessThanOrEqual(
+      282,
+    );
     await page.keyboard.press('Escape');
     await page.getByRole('tab', { name: '公开来源查重' }).click();
     await expect(page.locator('.work-results-summary .spin')).toHaveCount(0);

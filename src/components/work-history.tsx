@@ -23,6 +23,24 @@ export function workHistoryLabel(task: WorkTask) {
             : '已完成';
   return `${method}${task.results.model ? ' · ' + task.results.model : ''} · ${new Date(task.createdAt).toLocaleString('zh-CN')} · ${status}`;
 }
+function historyMethod(task: WorkTask) {
+  return task.kind === 'similarity'
+    ? '公开来源查重'
+    : task.results.engine === 'local'
+      ? '中文专用检测'
+      : task.results.engine === 'detector'
+        ? '外部专用检测'
+        : 'AI 辅助分析';
+}
+function historyTime(task: WorkTask) {
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(task.createdAt));
+}
 export function WorkHistory({
   tasks,
   selected,
@@ -53,18 +71,30 @@ export function WorkHistory({
   const current = tasks.find((t) => t.id === selected) || tasks[0];
   return (
     <details ref={root} className="work-history">
-      <summary title={workHistoryLabel(current)}>历史记录 · {workHistoryLabel(current)}</summary>
+      <summary title={workHistoryLabel(current)}>
+        历史 · {historyMethod(current)} · {historyTime(current)}
+      </summary>
       <div className="work-history-list" aria-label="Work 历史记录列表">
         {tasks.map((task) => (
           <div className="work-history-row" key={task.id}>
             <button
+              title={workHistoryLabel(task)}
               aria-current={task.id === selected ? 'true' : undefined}
               onClick={() => {
                 onSelect(task.id);
                 root.current?.removeAttribute('open');
               }}
             >
-              {workHistoryLabel(task)}
+              <span className="history-main">
+                <strong>{historyMethod(task)}</strong>
+                <span className="history-status">{workHistoryLabel(task).split(' · ').at(-1)}</span>
+              </span>
+              <span className="history-meta">
+                {historyTime(task)}
+                {task.results.engine === 'assistant' || task.results.engine === 'detector'
+                  ? ` · ${task.results.model || '未记录模型'}`
+                  : ''}
+              </span>
             </button>
             <button
               aria-label={`删除历史记录 ${workHistoryLabel(task)}`}

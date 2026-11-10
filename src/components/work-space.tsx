@@ -33,6 +33,7 @@ import { WorkDetectorSettings } from './work-detector-settings';
 import { WorkLocalDetector } from './work-local-detector';
 import { UpdateBadge } from './app-updates';
 import { WorkHistory, workHistoryLabel } from './work-history';
+import { ScientificText } from './scientific-text';
 import type { WorkTask } from '@/lib/work';
 
 type Summary = Pick<WorkDocument, 'id' | 'title' | 'fileName' | 'fileSize' | 'createdAt'>;
@@ -395,10 +396,13 @@ export function WorkSpace({
           <header className="work-header">
             <div>
               {!doc && <span className="eyebrow">PAPERLEAF WORK</span>}
-              <h1 title={doc?.title}>{doc?.title || '把问题看清，再动笔修改。'}</h1>
+              <h1 title={doc?.title}>
+                {doc ? <ScientificText text={doc.title} /> : '把问题看清，再动笔修改。'}
+              </h1>
               {doc && (
-                <small>
-                  {doc.fileName} · {doc.paragraphs.length} 段 · {fileSize(doc.fileSize)}
+                <small title={doc.fileName}>
+                  {doc.fileName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'Word'} ·{' '}
+                  {doc.paragraphs.length} 段 · {fileSize(doc.fileSize)}
                 </small>
               )}
             </div>
