@@ -187,7 +187,9 @@ try {
   const settingsDialog = window.getByRole('dialog');
   await expect(
     settingsDialog.getByRole('navigation', { name: '设置分类' }).getByRole('button'),
-  ).toHaveCount(6);
+  ).toHaveCount(7);
+  await settingsDialog.getByRole('button', { name: 'Work 检查', exact: true }).click();
+  await expect(settingsDialog.getByText('历史、报告与重试', { exact: true })).toBeVisible();
   await settingsDialog.getByRole('button', { name: 'AI 配置', exact: true }).click();
   await expect(settingsDialog.getByLabel('API 地址')).toBeVisible();
   await expect(settingsDialog.getByLabel('模型名称')).toBeVisible();
