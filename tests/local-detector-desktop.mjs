@@ -45,7 +45,7 @@ try {
   await page.getByRole('menuitemradio', { name: /PaperLeaf Work/ }).click();
   await page.getByLabel('上传 Work 稿件').setInputFiles(manuscript);
   await expect(page.getByRole('heading', { level: 1, name: 'local-demo' })).toBeVisible();
-  await expect(page.getByText('本地中文检测已就绪 · 离线运行，无需 Key')).toBeVisible();
+  await expect(page.locator('.work-options > summary')).toContainText('本地运行');
   await expect(page.getByLabel('检测方式')).toHaveValue('local');
   const started = Date.now();
   await page.getByRole('button', { name: '开始分析', exact: true }).click();

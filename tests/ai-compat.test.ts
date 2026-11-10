@@ -11,6 +11,34 @@ import { uploadDir } from '@/server/config';
 afterAll(async () => {
   await db.$disconnect();
 });
+it('requests JSON for Work only, falls back once for unsupported formats and exposes partial content for paragraph validation', async () => {
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(new Response('{"error":"response_format unsupported"}', { status: 400 }))
+    .mockResolvedValueOnce(
+      Response.json({
+        choices: [{ message: { content: '{"findings":[' }, finish_reason: 'length' }],
+      }),
+    );
+  vi.stubGlobal('fetch', fetchMock);
+  try {
+    const result = await completion(
+      [{ role: 'user', content: 'JSON test' }],
+      undefined,
+      1200,
+      { enabled: true, apiKey: 'synthetic', baseUrl: 'https://example.com/v1', model: 'test' },
+      { jsonObject: true },
+    );
+    expect(result.text).toBe('{"findings":[');
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).response_format).toEqual({
+      type: 'json_object',
+    });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).not.toHaveProperty('response_format');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
 it('reads text content blocks and never substitutes private reasoning for final answers', () => {
   expect(
     parseCompletion({

@@ -90,6 +90,7 @@ export function WorkSpace({
     [deleting, setDeleting] = useState(false),
     [renaming, setRenaming] = useState(false),
     [newTitle, setNewTitle] = useState('');
+  const [reportDetails, setReportDetails] = useState<'sources' | 'scope' | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false),
     [dragging, setDragging] = useState(false),
     [sidebar, setSidebar] = useState(true);
@@ -118,7 +119,12 @@ export function WorkSpace({
       }).catch(() => setError('上次稿件记忆未保存，可稍后重试'));
       try {
         const detail = await loadDoc(id);
-        if (activeRef.current === id) setQuery(detail.title.slice(0, 250));
+        if (activeRef.current === id) {
+          setQuery(detail.title.slice(0, 250));
+          const previousEngine = detail.tasks.find((t) => t.kind === 'aigc')?.results.engine;
+          if (previousEngine === 'assistant' || previousEngine === 'local')
+            setEngine(previousEngine);
+        }
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : '读取失败');
       }
@@ -385,8 +391,8 @@ export function WorkSpace({
         <main className="work-main">
           <header className="work-header">
             <div>
-              <span className="eyebrow">PAPERLEAF WORK</span>
-              <h1>{doc?.title || '把问题看清，再动笔修改。'}</h1>
+              {!doc && <span className="eyebrow">PAPERLEAF WORK</span>}
+              <h1 title={doc?.title}>{doc?.title || '把问题看清，再动笔修改。'}</h1>
               {doc && (
                 <small>
                   {doc.fileName} · {doc.paragraphs.length} 段 · {fileSize(doc.fileSize)}
@@ -568,11 +574,13 @@ export function WorkSpace({
                     onClick={() => void start()}
                   >
                     {busy ? <LoaderCircle size={16} className="spin" /> : null}
-                    {task?.status === 'failed' || task?.status === 'cancelled'
-                      ? '继续检查'
-                      : kind === 'aigc'
-                        ? '开始分析'
-                        : '开始查重'}
+                    {task?.results.failedParagraphs
+                      ? '重试未完成段落'
+                      : task?.status === 'failed' || task?.status === 'cancelled'
+                        ? '继续检查'
+                        : kind === 'aigc'
+                          ? '开始分析'
+                          : '开始查重'}
                   </Button>
                   {running && (
                     <Button
@@ -601,34 +609,48 @@ export function WorkSpace({
                     </button>
                   )}
                 </div>
-                <p className="work-privacy">
-                  {kind === 'aigc'
-                    ? engine === 'assistant'
-                      ? `手动开始后，正文分段发送至 ${config?.host || settings?.aiHost || '所选 API 服务'}。这是表达风险分析，不证明作者身份，不生成虚构的 AI 率。`
-                      : engine === 'local'
-                        ? '正文只在本机 CPU 推理，不发送到 AI 服务；整段评分仅供人工核对。'
-                        : '手动开始后正文发送至你配置的专用检测器，结果仅供人工核对。'
-                    : `仅将检索词或稿件标题发送至 Europe PMC / OpenAlex / arXiv，不发送稿件正文。${discover ? '自动简化检索词，读取最多 4 个新正文，支持 PDF 回退。' : '仅比对已经取得的来源。'}不覆盖全网或知网。`}
-                </p>
-                {kind === 'aigc' && (
-                  <>
-                    <WorkLocalDetector
-                      state={local}
-                      onChange={setLocal}
-                      onError={setError}
-                      onReady={enableLocal}
-                    />
-                    <WorkDetectorSettings
-                      disabled={!!running || busy}
-                      onError={setError}
-                      onSaved={(enabled) => {
-                        setDetector(enabled);
-                        if (!enabled) setEngine('assistant');
-                        setNotice('专用检测器配置已保存到本机');
-                      }}
-                    />
-                  </>
-                )}
+                <details className="work-options">
+                  <summary>
+                    说明与高级设置
+                    {kind === 'aigc'
+                      ? engine === 'assistant'
+                        ? ` · 手动分析发送至 ${config?.host || settings?.aiHost || '所选服务'}`
+                        : engine === 'local'
+                          ? local?.ready
+                            ? ' · 本地运行'
+                            : ' · 点击下载本地模型'
+                          : ' · 使用外部检测服务'
+                      : ''}
+                  </summary>
+                  <p className="work-privacy">
+                    {kind === 'aigc'
+                      ? engine === 'assistant'
+                        ? `手动开始后，正文分段发送至 ${config?.host || settings?.aiHost || '所选 API 服务'}。格式有误时最多补请求一次，仅补缺失段落，成功内容缓存。表达风险分析不证明作者身份。`
+                        : engine === 'local'
+                          ? '正文只在本机 CPU 推理，不发送到 AI 服务；整段评分仅供人工核对。'
+                          : '手动开始后正文发送至你配置的专用检测器，结果仅供人工核对。'
+                      : `仅将检索词或稿件标题发送至 Europe PMC / OpenAlex / arXiv，不发送稿件正文。${discover ? '自动简化检索词，读取最多 4 个新正文，支持 PDF 回退。' : '仅比对已经取得的来源。'}不覆盖全网或知网。`}
+                  </p>
+                  {kind === 'aigc' && (
+                    <>
+                      <WorkLocalDetector
+                        state={local}
+                        onChange={setLocal}
+                        onError={setError}
+                        onReady={enableLocal}
+                      />
+                      <WorkDetectorSettings
+                        disabled={!!running || busy}
+                        onError={setError}
+                        onSaved={(enabled) => {
+                          setDetector(enabled);
+                          if (!enabled) setEngine('assistant');
+                          setNotice('专用检测器配置已保存到本机');
+                        }}
+                      />
+                    </>
+                  )}
+                </details>
                 {kind === 'similarity' && sourcesOpen && (
                   <div className="work-sources">
                     <form
@@ -715,8 +737,7 @@ export function WorkSpace({
                   {task?.progress || '导入后不会自动开始检查'}
                   {task && (
                     <small>
-                      {task.results.checkedParagraphs ?? 0} / {task.results.totalParagraphs ?? 0} 段
-                      {task.results.model ? ` · ${task.results.model}` : ''}
+                      {task.results.model || `${task.results.totalParagraphs ?? 0} 段正文`}
                     </small>
                   )}
                 </p>
@@ -747,44 +768,18 @@ export function WorkSpace({
                 )}
               </section>
               {task?.error && <div className="work-alert">{task.error}</div>}
-              {kind === 'similarity' && task?.results.discovery && (
-                <details className="work-discovery" open={task.results.comparedSources === 0}>
-                  <summary>
-                    来源检索详情 · {task.results.discovery.candidates} 个候选 ·{' '}
-                    {task.results.discovery.fetched} 个新正文
-                  </summary>
-                  <p>实际检索词：{task.results.discovery.queries.join(' → ')}</p>
-                  {task.results.discovery.providers.map((provider) => (
-                    <p key={provider.name}>
-                      <strong>{provider.name}</strong> · {provider.message}
-                    </p>
-                  ))}
-                  {task.results.discovery.failures.map((failure, i) => (
-                    <p key={i}>
-                      <a href={failure.url} target="_blank" rel="noreferrer">
-                        {failure.title}
-                      </a>
-                      ：{failure.reason}
-                    </p>
-                  ))}
-                  {!task.results.comparedSources && (
-                    <p>
-                      尚无正文可比对。请缩短为主题词（如 BiVO4 water
-                      splitting），或展开来源管理补充公开全文链接。
-                    </p>
+              {(!!task?.results.discovery || !!task?.results.warnings?.length) && (
+                <div className="work-detail-links">
+                  {kind === 'similarity' && task?.results.discovery && (
+                    <button onClick={() => setReportDetails('sources')}>
+                      来源详情 · {task.results.discovery.candidates} 个候选 ·{' '}
+                      {task.results.comparedSources || 0} 个正文
+                    </button>
                   )}
-                  <button className="text-link" onClick={() => setSourcesOpen(true)}>
-                    打开来源管理
-                  </button>
-                </details>
-              )}
-              {!!task?.results.warnings?.length && (
-                <details className="work-report-scope">
-                  <summary>报告范围与说明</summary>
-                  {task.results.warnings.map((warning, index) => (
-                    <p key={index}>{warning}</p>
-                  ))}
-                </details>
+                  {!!task?.results.warnings?.length && (
+                    <button onClick={() => setReportDetails('scope')}>报告说明</button>
+                  )}
+                </div>
               )}
               <div className="work-reading-grid">
                 <article className="work-text" aria-label="稿件正文">
@@ -828,7 +823,9 @@ export function WorkSpace({
                             className={focus === item.paragraphId ? 'active' : ''}
                             onClick={() => jump(item.paragraphId)}
                           >
-                            <span className={`work-risk ${item.risk}`}>{labels[item.risk]}</span>
+                            <span className={`work-risk ${item.risk}`}>
+                              {item.retryable ? '待重试' : labels[item.risk]}
+                            </span>
                             <span>第 {item.paragraphId.slice(1)} 段</span>
                             {item.score !== undefined && (
                               <small>模型评分 {(item.score * 100).toFixed(1)}%</small>
@@ -918,6 +915,48 @@ export function WorkSpace({
           onUpload={() => input.current?.click()}
           onError={setError}
         />
+        <Dialog
+          open={!!reportDetails}
+          onOpenChange={(value) => {
+            if (!value) setReportDetails(null);
+          }}
+          title={reportDetails === 'sources' ? '来源检索详情' : '报告范围与说明'}
+        >
+          <div className="work-detail-dialog">
+            {reportDetails === 'sources' && task?.results.discovery && (
+              <>
+                <p>实际检索词：{task.results.discovery.queries.join(' → ')}</p>
+                {task.results.discovery.providers.map((provider) => (
+                  <p key={provider.name}>
+                    <strong>{provider.name}</strong> · {provider.message}
+                  </p>
+                ))}
+                {task.results.discovery.failures.map((failure, i) => (
+                  <p key={i}>
+                    <a href={failure.url} target="_blank" rel="noreferrer">
+                      {failure.title}
+                    </a>
+                    ：{failure.reason}
+                  </p>
+                ))}
+                {!task.results.comparedSources && (
+                  <p>尚无可比对正文。请缩短为主题词，或在来源管理补充公开全文链接。</p>
+                )}
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setSourcesOpen(true);
+                    setReportDetails(null);
+                  }}
+                >
+                  打开来源管理
+                </Button>
+              </>
+            )}
+            {reportDetails === 'scope' &&
+              task?.results.warnings?.map((warning, i) => <p key={i}>{warning}</p>)}
+          </div>
+        </Dialog>
         <Dialog
           open={deleting}
           onOpenChange={(value) => {
@@ -1036,9 +1075,9 @@ function Finding({
   return (
     <div className="work-finding-detail">
       <span className={`work-risk ${finding.risk}`}>
-        {labels[finding.risk]} · 第 {finding.paragraphId.slice(1)} 段
+        {finding.retryable ? '待重试' : labels[finding.risk]} · 第 {finding.paragraphId.slice(1)} 段
       </span>
-      <blockquote>{finding.quote.slice(0, 500)}</blockquote>
+      {finding.quote && <blockquote>{finding.quote.slice(0, 500)}</blockquote>}
       <h3>为什么需要核对</h3>
       <p>{finding.reason}</p>
       <h3>修改建议</h3>

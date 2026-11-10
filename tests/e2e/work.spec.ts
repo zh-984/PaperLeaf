@@ -43,6 +43,7 @@ test('Work mode imports, analyzes, locates, persists, configures detectors and d
       detail.tasks.find((task: { kind: string }) => task.kind === 'similarity').results.percentage,
     ).toBeNull();
     await page.getByRole('tab', { name: 'AIGC 分析' }).click();
+    await page.locator('.work-options > summary').click();
     await page.getByText('外部检测服务（高级，可选）').click();
     await page.getByLabel('检测器接口地址').fill('http://127.0.0.1:4123/detect');
     await page.getByLabel('检测模型名称').fill('synthetic-detector');

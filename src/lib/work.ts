@@ -14,6 +14,7 @@ export interface WorkFinding {
   suggestion: string;
   revision: string;
   score?: number;
+  retryable?: boolean;
 }
 export interface LocalDetectorState {
   ready: boolean;
@@ -33,6 +34,7 @@ export interface WorkMatch {
   sourceQuote: string;
 }
 export interface WorkResults {
+  failedParagraphs?: number;
   discovery?: {
     queries: string[];
     providers: { name: string; count: number; status: 'ok' | 'empty' | 'error'; message: string }[];

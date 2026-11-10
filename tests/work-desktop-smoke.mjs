@@ -27,26 +27,33 @@ zip.file(
 );
 await writeFile(manuscript, await zip.generateAsync({ type: 'nodebuffer' }));
 let requests = 0;
+const malformed = process.env.WORK_TEST_MALFORMED === '1';
+const requestGroups = [];
 const mock = createServer(async (request, response) => {
   let text = '';
   for await (const chunk of request) text += chunk;
   const payload = JSON.parse(text);
   const context = JSON.parse(payload.messages.at(-1).content);
-  const content = JSON.stringify({
-    findings: context.paragraphs.map((p) => ({
-      paragraphId: p.id,
-      risk: 'medium',
-      quote: p.text.slice(0, 50),
-      reason: '本机模拟检查，仅验证流程',
-      suggestion: '核对事实并明确研究边界',
-      revision: '',
-    })),
-  });
+  requestGroups.push(context.paragraphs.map((p) => p.id));
+  const findings = context.paragraphs.map((p) => ({
+    paragraphId: p.id,
+    risk: 'medium',
+    quote: p.text.slice(0, 50),
+    reason: '本机模拟检查，仅验证流程',
+    suggestion: '核对事实并明确研究边界',
+    revision: '',
+  }));
+  const truncate = malformed && requests === 0;
+  const content = truncate
+    ? '分析结果：{"findings":[' +
+      JSON.stringify(findings[0]) +
+      ',{"paragraphId":"p2","reason":"unfinished'
+    : JSON.stringify({ findings });
   requests++;
   response.writeHead(200, { 'Content-Type': 'application/json' });
   response.end(
     JSON.stringify({
-      choices: [{ message: { content }, finish_reason: 'stop' }],
+      choices: [{ message: { content }, finish_reason: truncate ? 'length' : 'stop' }],
       usage: { total_tokens: 42 },
     }),
   );
@@ -94,7 +101,8 @@ try {
     const [doc] = await (await fetch('/api/work')).json();
     return (await fetch('/api/work/' + doc.id)).json();
   });
-  expect(requests).toBe(1);
+  expect(requests).toBe(malformed ? 2 : 1);
+  if (malformed) expect(requestGroups).toEqual([['p1', 'p2'], ['p2']]);
   await desktop.close();
   desktop = undefined;
   page = await launch();
@@ -106,7 +114,7 @@ try {
   );
   expect(after.paragraphs).toEqual(before.paragraphs);
   expect(after.tasks[0]).toEqual(before.tasks[0]);
-  expect(requests).toBe(1);
+  expect(requests).toBe(malformed ? 2 : 1);
   const layout = await page.evaluate(() => ({
     height: innerHeight,
     body: document.documentElement.scrollHeight,
@@ -127,6 +135,8 @@ try {
   console.log(
     JSON.stringify({
       packagedWork: true,
+      malformedJsonRecovered: malformed,
+      onlyMissingParagraphRepaired: malformed,
       version,
       realDocxExtracted: true,
       analysisSaved: true,

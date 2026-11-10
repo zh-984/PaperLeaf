@@ -27,7 +27,7 @@ export function contentText(content: unknown): string {
     })
     .join('\n');
 }
-export function parseCompletion(payload: unknown) {
+export function parseCompletion(payload: unknown, allowIncomplete = false) {
   const parsed = envelope.safeParse(payload);
   if (!parsed.success)
     throw new ApiError(
@@ -36,7 +36,7 @@ export function parseCompletion(payload: unknown) {
     );
   const choice = parsed.data.choices[0],
     text = contentText(choice.message.content).trim();
-  if (choice.finish_reason === 'length')
+  if (choice.finish_reason === 'length' && !allowIncomplete)
     throw new ApiError(
       502,
       '模型的思考或回答达到输出上限，未生成完整答案；已保留进度，不会自动重复扣费。可点击继续解读。',
@@ -52,7 +52,7 @@ export function parseCompletion(payload: unknown) {
     );
   return { text, tokens: parsed.data.usage?.total_tokens ?? 0 };
 }
-export async function readCompletion(response: Response) {
+export async function readCompletion(response: Response, allowIncomplete = false) {
   const raw = await response.text();
   if (raw.length > 4 * 1024 * 1024) throw new ApiError(502, 'AI 返回内容过长，已停止读取');
   if (
@@ -98,10 +98,13 @@ export async function readCompletion(response: Response) {
         throw new ApiError(502, 'AI 流式数据损坏，请检查兼容服务');
       }
     }
-    return parseCompletion({
-      choices: [{ message: { content, reasoning_content: reasoning }, finish_reason: finish }],
-      usage: { total_tokens: tokens },
-    });
+    return parseCompletion(
+      {
+        choices: [{ message: { content, reasoning_content: reasoning }, finish_reason: finish }],
+        usage: { total_tokens: tokens },
+      },
+      allowIncomplete,
+    );
   }
   let value: unknown;
   try {
@@ -109,5 +112,5 @@ export async function readCompletion(response: Response) {
   } catch {
     throw new ApiError(502, 'AI 服务返回的不是 JSON 或 SSE 数据，请检查 API 地址');
   }
-  return parseCompletion(value);
+  return parseCompletion(value, allowIncomplete);
 }
