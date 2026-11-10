@@ -6,6 +6,7 @@ import { getAiConfig } from '../ai/settings';
 import { ApiError } from '../http';
 import { requireWork } from './documents';
 import { addSource, discoverSources } from './sources';
+import { sourceError } from './discovery';
 import { getWorkDetector } from './detector';
 import {
   localDetectorState,
@@ -277,22 +278,68 @@ async function runWork(
       };
       if (input.discover) {
         await save(results, '正在检索开放论文来源…');
-        const discovery = await discoverSources(input.query || doc.title, signal);
+        const networkSignal = AbortSignal.any([signal, AbortSignal.timeout(110000)]);
+        const discovery = await discoverSources(input.query || doc.title, networkSignal);
         results.warnings!.push(discovery.scope, ...discovery.warnings);
         const existing = await db.workSource.findMany({ where: { documentId } });
-        let fetched = 0;
+        const knownIds = new Set(existing.map((s) => s.id));
+        const diagnostics = (results.discovery = {
+          queries: discovery.queries,
+          providers: discovery.providers,
+          candidates: discovery.candidates.length,
+          fetched: 0,
+          reused: 0,
+          failures: [] as { title: string; url: string; reason: string }[],
+        });
+        await save(results, `找到 ${discovery.candidates.length} 个候选，正在读取正文…`);
+        let attempts = 0;
         for (const candidate of discovery.candidates) {
           signal.throwIfAborted();
-          if (existing.some((s) => s.url === candidate.url) || fetched >= 4) continue;
-          await save(results, `读取候选来源：${candidate.title.slice(0, 55)}`);
-          try {
-            await addSource(documentId, candidate.url, signal);
-            fetched++;
-          } catch {
-            signal.throwIfAborted();
-            results.warnings!.push(`未取得全文：${candidate.title.slice(0, 80)}`);
+          if (
+            existing.some((s) => [candidate.url, ...(candidate.alternatives || [])].includes(s.url))
+          ) {
+            diagnostics.reused++;
+            continue;
           }
+          if (
+            diagnostics.fetched >= 4 ||
+            attempts >= 12 ||
+            knownIds.size >= 12 ||
+            networkSignal.aborted
+          )
+            break;
+          await save(results, `读取候选来源：${candidate.title.slice(0, 55)}`);
+          for (const url of [candidate.url, ...(candidate.alternatives || [])].slice(0, 3)) {
+            if (attempts++ >= 12 || networkSignal.aborted) break;
+            try {
+              const source = await addSource(documentId, url, networkSignal, candidate.title, true);
+              if (!knownIds.has(source.id)) {
+                diagnostics.fetched++;
+                knownIds.add(source.id);
+              } else diagnostics.reused++;
+              break;
+            } catch (error) {
+              signal.throwIfAborted();
+              diagnostics.failures.push({
+                title: candidate.title.slice(0, 100),
+                url,
+                reason: sourceError(error),
+              });
+            }
+          }
+          await save(
+            results,
+            `已取得 ${diagnostics.fetched} 个新正文 · 复用 ${diagnostics.reused} 个来源`,
+          );
         }
+        if (networkSignal.aborted)
+          results.warnings!.push(
+            '本轮来源读取达到 110 秒上限；已取得正文仍会参与比对，可稍后补充来源再查重。',
+          );
+        if (!discovery.candidates.length)
+          results.warnings!.push(
+            '没有找到全文候选。建议用 2–5 个主题词（如 BiVO4 water splitting），或在来源管理粘贴公开全文链接。',
+          );
       }
       const sources = await db.workSource.findMany({
         where: { documentId },
@@ -364,7 +411,9 @@ async function runWork(
             ? '任务已取消，已完成结果保留'
             : error instanceof ApiError
               ? error.message
-              : '检查失败，请稍后继续；已完成段落仍保留',
+              : input.kind === 'similarity'
+                ? `查重未完成：${sourceError(error)}；已保存结果保留。`
+                : '检查失败，请稍后继续；已完成段落仍保留',
           resultsJson: JSON.stringify(results),
         },
       })

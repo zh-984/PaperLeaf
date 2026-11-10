@@ -16,6 +16,7 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     browserName: 'chromium',
+    channel: process.env.PLAYWRIGHT_CHANNEL || undefined,
     viewport: { width: 1440, height: 960 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

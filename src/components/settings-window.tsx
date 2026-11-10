@@ -16,6 +16,7 @@ import { AiSettings } from './ai-settings';
 import { Button } from './ui/button';
 import { desktopAction } from '@/lib/desktop';
 import { fileSize } from '@/lib/utils';
+import { CheckUpdates } from './app-updates';
 const sections = [
   ['general', '常规', Settings2, '导入 自动解读 默认页面'],
   ['files', '文件与存储', FileText, '导入 PDF 数据目录 备份'],
@@ -345,6 +346,7 @@ export function SettingsWindow({
                         <Button variant="secondary" onClick={() => void action('about')}>
                           关于知页
                         </Button>
+                        <CheckUpdates />
                       </div>
                     </div>
                   </div>

@@ -31,6 +31,7 @@ import { DesktopTitlebar } from './desktop-titlebar';
 import { desktopAction } from '@/lib/desktop';
 import { WorkDetectorSettings } from './work-detector-settings';
 import { WorkLocalDetector } from './work-local-detector';
+import { UpdateBadge } from './app-updates';
 
 type Summary = Pick<WorkDocument, 'id' | 'title' | 'fileName' | 'fileSize' | 'createdAt'>;
 const labels = { high: '重点核对', medium: '建议检查', low: '低表达风险', unknown: '信息不足' };
@@ -372,10 +373,13 @@ export function WorkSpace({
                 <small>检查由你手动开始</small>
               </span>
             </div>
-            <button className="settings-button" onClick={() => openSettings()}>
-              <Settings2 size={16} /> 设置与隐私
-              <ChevronRight size={14} />
-            </button>
+            <div className="settings-update-row">
+              <button className="settings-button" onClick={() => openSettings()}>
+                <Settings2 size={16} /> 设置与隐私
+                <ChevronRight size={14} />
+              </button>
+              <UpdateBadge />
+            </div>
           </div>
         </aside>
         <main className="work-main">
@@ -604,7 +608,7 @@ export function WorkSpace({
                       : engine === 'local'
                         ? '正文只在本机 CPU 推理，不发送到 AI 服务；整段评分仅供人工核对。'
                         : '手动开始后正文发送至你配置的专用检测器，结果仅供人工核对。'
-                    : `检索词发送至 Europe PMC / arXiv，仅统计取得正文的来源。${discover ? '自动尝试读取最多 4 个候选全文。' : '仅比对已经取得的来源。'}不覆盖全网或知网。`}
+                    : `仅将检索词或稿件标题发送至 Europe PMC / OpenAlex / arXiv，不发送稿件正文。${discover ? '自动简化检索词，读取最多 4 个新正文，支持 PDF 回退。' : '仅比对已经取得的来源。'}不覆盖全网或知网。`}
                 </p>
                 {kind === 'aigc' && (
                   <>
@@ -657,7 +661,8 @@ export function WorkSpace({
                     </form>
                     <small>
                       只读取你提交的公开页面，不读取本机或内网。最多 12
-                      个来源；失败的来源不计入重复率。
+                      个正文来源，不下载整库、不保存远端 PDF；单次读取最多 6 MiB，正文最多 15
+                      万字符。失败的来源不计入重复率。
                     </small>
                     {doc.sources.map((source) => (
                       <div key={source.id}>
@@ -742,6 +747,37 @@ export function WorkSpace({
                 )}
               </section>
               {task?.error && <div className="work-alert">{task.error}</div>}
+              {kind === 'similarity' && task?.results.discovery && (
+                <details className="work-discovery" open={task.results.comparedSources === 0}>
+                  <summary>
+                    来源检索详情 · {task.results.discovery.candidates} 个候选 ·{' '}
+                    {task.results.discovery.fetched} 个新正文
+                  </summary>
+                  <p>实际检索词：{task.results.discovery.queries.join(' → ')}</p>
+                  {task.results.discovery.providers.map((provider) => (
+                    <p key={provider.name}>
+                      <strong>{provider.name}</strong> · {provider.message}
+                    </p>
+                  ))}
+                  {task.results.discovery.failures.map((failure, i) => (
+                    <p key={i}>
+                      <a href={failure.url} target="_blank" rel="noreferrer">
+                        {failure.title}
+                      </a>
+                      ：{failure.reason}
+                    </p>
+                  ))}
+                  {!task.results.comparedSources && (
+                    <p>
+                      尚无正文可比对。请缩短为主题词（如 BiVO4 water
+                      splitting），或展开来源管理补充公开全文链接。
+                    </p>
+                  )}
+                  <button className="text-link" onClick={() => setSourcesOpen(true)}>
+                    打开来源管理
+                  </button>
+                </details>
+              )}
               {!!task?.results.warnings?.length && (
                 <details className="work-report-scope">
                   <summary>报告范围与说明</summary>

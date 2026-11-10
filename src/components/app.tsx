@@ -3,7 +3,15 @@ import { Activity, useCallback, useEffect, useRef, useState } from 'react';
 import { Workspace } from './workspace';
 import { WorkSpace } from './work-space';
 import { api } from '@/lib/api';
+import { AppUpdates } from './app-updates';
 export function App() {
+  return (
+    <AppUpdates>
+      <AppWorkspaces />
+    </AppUpdates>
+  );
+}
+function AppWorkspaces() {
   const [mode, setMode] = useState<'read' | 'work' | null>(null);
   const [error, setError] = useState('');
   const [visited, setVisited] = useState<('read' | 'work')[]>([]);

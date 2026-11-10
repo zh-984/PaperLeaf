@@ -214,6 +214,7 @@ for (const file of [
   'server-bootstrap.cjs',
   'data.cjs',
   'word.cjs',
+  'updates.cjs',
   'loading.html',
 ])
   await copyFile(path.join('desktop', file), path.join(appRoot, file));

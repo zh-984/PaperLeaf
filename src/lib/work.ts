@@ -33,6 +33,14 @@ export interface WorkMatch {
   sourceQuote: string;
 }
 export interface WorkResults {
+  discovery?: {
+    queries: string[];
+    providers: { name: string; count: number; status: 'ok' | 'empty' | 'error'; message: string }[];
+    candidates: number;
+    fetched: number;
+    reused: number;
+    failures: { title: string; url: string; reason: string }[];
+  };
   findings?: WorkFinding[];
   matches?: WorkMatch[];
   percentage?: number | null;

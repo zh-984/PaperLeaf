@@ -1,4 +1,5 @@
 'use client';
+import { UpdateBadge } from './app-updates';
 import { ScientificText } from './scientific-text';
 import { ModeBrand } from './mode-brand';
 import { formatScientificText, recoverScientificText } from '@/lib/citation';
@@ -382,11 +383,14 @@ export function ProjectShelf({
               </small>
             </span>
           </div>
-          <button className="settings-button" onClick={onSettings} disabled={!settings}>
-            <Settings2 size={16} />
-            设置与隐私
-            <ChevronRight size={14} />
-          </button>
+          <div className="settings-update-row">
+            <button className="settings-button" onClick={onSettings} disabled={!settings}>
+              <Settings2 size={16} />
+              设置与隐私
+              <ChevronRight size={14} />
+            </button>
+            <UpdateBadge />
+          </div>
         </div>
       </aside>
       <Dialog

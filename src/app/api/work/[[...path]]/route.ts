@@ -8,6 +8,7 @@ import { beginWork, cancelWork, recoverWork, workTaskInput } from '@/server/work
 import { addSource, discoverSources } from '@/server/work/sources';
 import { detectorDto, detectorSettingsSchema, saveWorkDetector } from '@/server/work/detector';
 import { localDetectorState, startLocalInstall } from '@/server/work/local-detector';
+import { sourceError } from '@/server/work/discovery';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ path?: string[] }> };
@@ -39,7 +40,7 @@ export async function workHandler(request: Request, context: Context): Promise<R
       return Response.json({
         ...detectorDto(),
         local: localDetectorState(),
-        sources: 'Europe PMC / arXiv + 用户补充公开链接',
+        sources: 'Europe PMC / OpenAlex / arXiv + 用户补充公开链接',
       });
     if (id === 'local-detector') {
       if (method === 'GET') return Response.json(localDetectorState());
@@ -157,7 +158,10 @@ export async function workHandler(request: Request, context: Context): Promise<R
         throw new ApiError(409, '检查进行中，请先取消再修改来源');
       if (method === 'POST' && !child) {
         const data = z.object({ url: z.url().max(2000) }).parse(await jsonBody(request));
-        const source = await addSource(id!, data.url, request.signal);
+        const source = await addSource(id!, data.url, request.signal).catch((error) => {
+          if (error instanceof ApiError) throw error;
+          throw new ApiError(422, `读取来源失败：${sourceError(error)}`);
+        });
         return Response.json(
           { id: source.id, title: source.title, url: source.url, characters: source.text.length },
           { status: 201 },

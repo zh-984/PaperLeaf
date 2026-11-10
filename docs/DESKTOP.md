@@ -4,11 +4,13 @@
 
 ## 安装与打开
 
-1. 从 [GitHub Releases](https://github.com/zh-984/PaperLeaf/releases/latest) 下载 `Paperleaf-Setup-0.9.2-x64.exe`，然后双击运行。
+1. 从 [GitHub Releases](https://github.com/zh-984/PaperLeaf/releases/latest) 下载 `Paperleaf-Setup-0.9.3-x64.exe`，然后双击运行。
 2. 按向导安装到当前用户目录。默认不需要管理员权限。
 3. 双击桌面的 **知页 Paperleaf**，或从开始菜单打开。
 
 安装程序会创建桌面和开始菜单快捷方式。关闭最后一个窗口会同时停止后台本地服务；再次打开会恢复书架、报告、笔记和阅读位置。同一时间只运行一个实例。
+
+0.9.3 起，启动 8 秒后检查官方 GitHub 最新正式版，进程内结果缓存一天；重复检查合并，不阻塞界面。仅当版本号更高且 x64 安装包已完整发布时，在 Read / Work 的设置入口右侧显示 `new`。点击查看说明并前往官方下载页；随后保存资料、退出知页，运行下载的安装包。没有新版、网络失败或只发布了测试版时不显示。设置 → 快捷键与关于 → 检查更新，可手动重试并查看错误。检查只请求版本元数据，不发送稿件、文献或 Key，不在后台下载 EXE，也不常驻保存安装包。本地开发版高于 GitHub 版本时，不提示降级。
 
 Windows x64 安装包中已包含 Chromium、Node 运行时、生产服务、PDF.js 离线资源和 SQLite 引擎。正常使用不依赖源代码目录和 pnpm。`win-unpacked` 是开发验证用的免安装目录；若使用该目录，需要保留整个目录，不能只拷贝其中的 `Paperleaf.exe`。
 

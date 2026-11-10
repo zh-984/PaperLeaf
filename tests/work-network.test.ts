@@ -1,5 +1,10 @@
 import { expect, it } from 'vitest';
 import { discoverSources, publicFetch, extractSourceText } from '@/server/work/sources';
+import { db } from '@/server/db';
+import { beginWork, workTaskInput } from '@/server/work/tasks';
+import { makeParagraphs } from '@/lib/work';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 it.skipIf(process.env.WORK_LIVE_NETWORK !== '1')(
   'retrieves actual open scholarly text without an AI API or private document',
   async () => {
@@ -39,4 +44,66 @@ it.skipIf(process.env.WORK_LIVE_NETWORK !== '1')(
     );
   },
   90000,
+);
+
+it.skipIf(process.env.WORK_LIVE_NETWORK !== '1')(
+  'completes a real public-source task from a Chinese scientific filename, then locates copied public text',
+  async () => {
+    const doc = await db.workDocument.create({
+      data: {
+        title: 'BiVO₄基光阳极化工进展4.1投稿版本',
+        fileName: 'public-test.docx',
+        filePath: randomUUID() + '.docx',
+        hash: randomUUID(),
+        fileSize: 0,
+        paragraphsJson: JSON.stringify(
+          makeParagraphs([
+            {
+              page: null,
+              text: 'This is an isolated public network workflow check. No private manuscript or paid AI key is used.',
+            },
+          ]),
+        ),
+      },
+    });
+    try {
+      let job = await beginWork(doc.id, workTaskInput.parse({ kind: 'similarity' }));
+      await job.run();
+      let task = await db.workTask.findUniqueOrThrow({ where: { id: job.task.id } });
+      const first = JSON.parse(task.resultsJson);
+      expect(task.status, task.error).toBe('complete');
+      expect(first.comparedSources, JSON.stringify(first.discovery)).toBeGreaterThan(0);
+      const sources = await db.workSource.findMany({ where: { documentId: doc.id } });
+      const snippet = sources[0].text.slice(0, 1200);
+      await db.workDocument.update({
+        where: { id: doc.id },
+        data: { paragraphsJson: JSON.stringify(makeParagraphs([{ page: null, text: snippet }])) },
+      });
+      job = await beginWork(doc.id, workTaskInput.parse({ kind: 'similarity', discover: false }));
+      await job.run();
+      task = await db.workTask.findUniqueOrThrow({ where: { id: job.task.id } });
+      const second = JSON.parse(task.resultsJson);
+      expect(second.percentage).toBe(100);
+      expect(second.matches.length).toBeGreaterThan(0);
+      const proof = {
+        livePublicWorkflow: true,
+        status: task.status,
+        providers: first.discovery.providers,
+        queries: first.discovery.queries,
+        candidates: first.discovery.candidates,
+        acquiredSources: sources.length,
+        storedTextBytes: sources.reduce((n, s) => n + Buffer.byteLength(s.text), 0),
+        downloadedPdfsSaved: 0,
+        knownCopiedPublicTextPercent: second.percentage,
+        locatedMatches: second.matches.length,
+        paidAiCalls: 0,
+      };
+      await mkdir('.test-data', { recursive: true });
+      await writeFile('.test-data/public-similarity-live.json', JSON.stringify(proof, null, 2));
+      console.log(JSON.stringify(proof));
+    } finally {
+      await db.workDocument.delete({ where: { id: doc.id } });
+    }
+  },
+  160000,
 );

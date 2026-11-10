@@ -14,6 +14,7 @@ module.exports = {
     'preload.cjs',
     'data.cjs',
     'word.cjs',
+    'updates.cjs',
     'loading.html',
     'assets/**/*',
     'package.json',

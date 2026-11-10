@@ -12,13 +12,15 @@
 
 ## Windows 桌面版（无需命令行）
 
-1. 打开 [下载页面（GitHub Releases）](https://github.com/zh-984/PaperLeaf/releases/latest)，下载 `Paperleaf-Setup-0.9.2-x64.exe`。
+1. 打开 [下载页面（GitHub Releases）](https://github.com/zh-984/PaperLeaf/releases/latest)，下载 `Paperleaf-Setup-0.9.3-x64.exe`。
 2. 在 Windows x64 电脑上双击安装，按提示完成后打开桌面的 **知页 Paperleaf**。
 3. 导入 PDF 后可直接阅读和记笔记；需要 AI 解读时，在设置中填写自己的 API 地址、Key 和模型名称。
 
 安装包已内置运行环境，无需安装 Node.js 或手工启动服务。该版本尚未签名，Windows 可能提示无法验证发布者，请确认安装包来自本项目的 GitHub Releases。GitHub 发布页提供 SHA-256 校验文件供核对。
 
 桌面版从左下角 **设置与隐私** 填写 API 地址、API Key 和模型名称，保存立即生效。其余阅读参数已预设。数据保存在 `%APPDATA%\Paperleaf\data`，更新安装不覆盖文献和笔记。完整说明见 [桌面版使用说明](docs/DESKTOP.md)。
+
+**0.9.3** 改进公开来源查重：三路检索、科学名词简化、HTML/PDF 回退、来源失败详情；只缓存正文，不下载论文数据库。桌面启动后检查 GitHub 正式发布，**只有确有更新版本且安装包已上传完成时**，设置入口右侧才出现 `new`。点击查看更新说明并进入官方下载页；不静默下载或执行安装包。未联网、当前版本相同或高于公开版本时均不显示 `new`，也可在“快捷键与关于”手动检查。
 
 ## 10 分钟启动
 

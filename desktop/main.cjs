@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, ipcMain, net: electronNet } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const net = require('node:net');
@@ -152,6 +152,27 @@ async function desktopAction(action, local) {
   }
 }
 function installMenu(local) {
+  const { createUpdateChecker, RELEASES } = require('./updates.cjs');
+  const checkUpdate = createUpdateChecker({
+    version: app.getVersion(),
+    fetch: (...args) => electronNet.fetch(...args),
+  });
+  ipcMain.handle('paperleaf:update', async (event, action) => {
+    if (
+      event.sender !== window.webContents ||
+      event.senderFrame !== window.webContents.mainFrame ||
+      !baseUrl ||
+      new URL(event.senderFrame.url).origin !== baseUrl
+    )
+      throw new Error('拒绝非应用页面的更新操作');
+    if (action === 'check' || action === 'status') return checkUpdate(action === 'check');
+    if (action === 'open') {
+      const state = await checkUpdate();
+      await shell.openExternal(state.status === 'available' ? state.url : RELEASES);
+      return state;
+    }
+    throw new Error('无效的更新操作');
+  });
   Menu.setApplicationMenu(null);
   window.setMenuBarVisibility(false);
   ipcMain.handle('paperleaf:word', async (event, input) => {
